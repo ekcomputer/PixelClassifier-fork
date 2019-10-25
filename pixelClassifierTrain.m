@@ -10,34 +10,34 @@ trainPath = env.output.train_dir;
 % labels can be created using ImageAnnotationBot:
 % https://www.mathworks.com/matlabcentral/fileexchange/64719-imageannotationbot
 
-sigmas = [1 2 3];
+sigmas = 1; %[1 2 3];
 % basic image features are simply derivatives (up to second order) in different scales;
 % this parameter specifies such scales; details in imageFeatures.m
 
-offsets = [3 5];
+offsets = 3; %[3 5]; %OPTIONAL
 % in pixels; for offset features (see imageFeatures.m)
 % set to [] to ignore offset features
-osSigma = 2;
+osSigma = [2]; %2;
 % sigma for offset features
 
-radii = [];%[15 20 25];
+radii = [];%[15 20 25]; %OPTIONAL
 % range of radii on which to compute circularity features (see imageFeatures.m)
 % set to [] to ignore circularity features
-cfSigma = 2;
+cfSigma = []; %2;
 % sigma for circularity features
 
-logSigmas = [1 2];
+logSigmas = [];%[1 2]; %OPTIONAL
 % sigmas for LoG features (see imageFeatures.m)
 % set to [] to ignore LoG features
 
-sfSigmas = [1 2];
+sfSigmas = [];%[1 2]; %OPTIONAL
 % steerable filter features sigmas (see imageFeatures.m)
 % set to [] to ignore steerable filter features
 
-nTrees = 20;
+nTrees = 10; %20;
 % number of decision trees in the random forest ensemble
 
-minLeafSize = 60;
+minLeafSize = 40; %60;
 % minimum number of observations per tree leaf
 
 pctMaxNPixelsPerLabel = 1;

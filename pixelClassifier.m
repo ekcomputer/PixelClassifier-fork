@@ -1,17 +1,17 @@
 clear, clc
 
 %% set parameters
-
-testPath = 'D:\Dropbox\Matlab\DownloadedCode\PixelClassifier\DataForPC\DataForPC\Test';
+Env_PixelClassifier % load environment vars
+testPath = env.output.test_dir;
 % where images are
 
 outputMasks = true;
 % if to output binary masks corresponding to pixel classes
 
-outputProbMaps = true;
+outputProbMaps = false; %true;
 % if to output probability maps from which output masks are derived
 
-modelPath = 'F:\PAD2019\classification_training\PixelClassifier\model1.mat';
+modelPath = env.output.current_model;
 % where the model is
 
 nSubsets = 100;
@@ -67,3 +67,10 @@ for imIndex = 1:length(imagePaths)
 end
 
 disp('done classifying')
+
+%% combine images
+for n=1:length(imagePaths)
+    [~, g(n).basename, ~]=fileparts(imagePaths{n});
+%     g(n).basename=[g(n).basename, '.tif'];
+    addOutputImages(g(n).basename);
+end
