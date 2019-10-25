@@ -9,6 +9,7 @@ function I = imreadGrayscaleDouble(path)
         I = double(I)/255;
     elseif isa(I,'uint16')
         I = double(I)/65535;
+    elseif isa(I,'single')
     else
         warning('did not recognize image class')
     end

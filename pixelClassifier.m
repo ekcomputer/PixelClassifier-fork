@@ -2,7 +2,7 @@ clear, clc
 
 %% set parameters
 
-testPath = '~/Workspace/DataForPC/Test';
+testPath = 'D:\Dropbox\Matlab\DownloadedCode\PixelClassifier\DataForPC\DataForPC\Test';
 % where images are
 
 outputMasks = true;
@@ -11,7 +11,7 @@ outputMasks = true;
 outputProbMaps = true;
 % if to output probability maps from which output masks are derived
 
-modelPath = '~/Workspace/model.mat';
+modelPath = 'F:\PAD2019\classification_training\PixelClassifier\model1.mat';
 % where the model is
 
 nSubsets = 100;

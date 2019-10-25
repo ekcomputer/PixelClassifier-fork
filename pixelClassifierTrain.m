@@ -1,8 +1,8 @@
 clear, clc
 
 %% set parameters
-
-trainPath = '~/Workspace/DataForPC/Train';
+Env_PixelClassifier % load environment vars
+trainPath = env.output.train_dir;
 % where images and labes are;
 % images are assumed to have the same size;
 % every image should have the same number of accompanied label masks,
@@ -20,7 +20,7 @@ offsets = [3 5];
 osSigma = 2;
 % sigma for offset features
 
-radii = [15 20 25];
+radii = [];%[15 20 25];
 % range of radii on which to compute circularity features (see imageFeatures.m)
 % set to [] to ignore circularity features
 cfSigma = 2;
@@ -44,7 +44,7 @@ pctMaxNPixelsPerLabel = 1;
 % percentage of max number of pixels per label (w.r.t. num of pixels in image);
 % this puts a cap on the number of training samples and can improve training speed
 
-modelPath = '~/Workspace/model.mat';
+modelPath = env.output.current_model;
 % path to where model will be saved
 
 % 
