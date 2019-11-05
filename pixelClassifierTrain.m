@@ -75,18 +75,36 @@ end
 
 %% construct train matrix
 
-ft = [];
-lb = [];
+
 tic
-for imIndex = 1:nImages
-    fprintf('computing features from image %d of %d\n', imIndex, nImages);
-    [F,featNames] = imageFeatures(imageList{imIndex},sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas);
+nBands=size(imageList{1}, 3);
+for imIndex = 1:nImages % loop over images 
     L = labelList{imIndex};
-    [rfFeat,rfLbl] = rfFeatAndLab(F,L);
-    ft = [ft; rfFeat];
+    lb=[];
+%     training(band).lb = [];
+    for band=1:nBands % loop over bands w/i image
+        if nBands~=size(imageList{imIndex}, 3)
+            txt=sprintf('Number of bands in image %d is %d, while it is %d in image 1.', band,size(imageList{imIndex}, 3), size(imageList{1}, 3));
+            error(txt);
+        end
+        training(band).ft = [];
+        fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+        [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas);
+        if band==1 % only compute labels for first band of image
+            [rfFeat,rfLbl] = rfFeatAndLab(F,L);
+        else
+            rfFeat = rfFeatAndLab(F, L);
+        end
+        training(band).ft = [training(band).ft; rfFeat];
+    end
     lb = [lb; rfLbl];
 end
+% clear F % save memory
 fprintf('time spent computing features: %f s\n', toc);
+
+%% concat training matrices (one for each band)
+ft=[training.ft];
+% lb=[training.lb];
 
 %% training
 

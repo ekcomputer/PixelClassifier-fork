@@ -48,7 +48,7 @@ for i = 1:nImages
     
     [minNSamp,indMinNSamp] = min(nSamplesPerClass);
     
-    L = uint8(zeros(size(I)));
+    L = uint8(zeros(size(I, 1), size(I, 2)));
     for j = 1:nClasses
         if j ~= indMinNSamp
             classJ = lbMaps{j} & (rand(size(classJ)) < minNSamp/nSamplesPerClass(j));

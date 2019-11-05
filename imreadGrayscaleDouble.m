@@ -1,11 +1,11 @@
 function I = imreadGrayscaleDouble(path)
     I = imread(path);
-    if size(I,3) == 2 || size(I,3) > 3
-        I = I(:,:,1);
-    elseif size(I,3) == 3
-        I = rgb2gray(I);
+    if size(I,3) > 1
+%         for k=1:size(I,3)
+%             I{k} = I(:,:,1);
+%         end
     end
-    if isa(I,'uint8')
+    if isa(I,'uint8') % TO UPDATE:
         I = double(I)/255;
     elseif isa(I,'uint16')
         I = double(I)/65535;
