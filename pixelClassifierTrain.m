@@ -10,37 +10,37 @@ trainPath = env.output.train_dir;
 % labels can be created using ImageAnnotationBot:
 % https://www.mathworks.com/matlabcentral/fileexchange/64719-imageannotationbot
 
-sigmas = 1; %[1 2 3];
+sigmas = env.pixelClassifier.sigmas; %[1 2 3];
 % basic image features are simply derivatives (up to second order) in different scales;
 % this parameter specifies such scales; details in imageFeatures.m
 
-offsets = 3; %[3 5]; %OPTIONAL
+offsets = env.pixelClassifier.offsets; %[3 5]; %OPTIONAL
 % in pixels; for offset features (see imageFeatures.m)
 % set to [] to ignore offset features
-osSigma = [2]; %2;
+osSigma = env.pixelClassifier.osSigma; %2;
 % sigma for offset features
 
-radii = [];%[15 20 25]; %OPTIONAL
+radii = env.pixelClassifier.radii;%[15 20 25]; %OPTIONAL
 % range of radii on which to compute circularity features (see imageFeatures.m)
 % set to [] to ignore circularity features
-cfSigma = []; %2;
+cfSigma = env.pixelClassifier.cfSigma; %2;
 % sigma for circularity features
 
-logSigmas = [];%[1 2]; %OPTIONAL
+logSigmas = env.pixelClassifier.logSigmas;%[1 2]; %OPTIONAL
 % sigmas for LoG features (see imageFeatures.m)
 % set to [] to ignore LoG features
 
-sfSigmas = [];%[1 2]; %OPTIONAL
+sfSigmas = env.pixelClassifier.sfSigmas;%[1 2]; %OPTIONAL
 % steerable filter features sigmas (see imageFeatures.m)
 % set to [] to ignore steerable filter features
 
-nTrees = 10; %20;
+nTrees = env.pixelClassifier.nTrees; %20;
 % number of decision trees in the random forest ensemble
 
-minLeafSize = 40; %60;
+minLeafSize = env.pixelClassifier.minLeafSize; %60;
 % minimum number of observations per tree leaf
 
-pctMaxNPixelsPerLabel = 1;
+pctMaxNPixelsPerLabel = env.pixelClassifier.pctMaxNPixelsPerLabel;
 % percentage of max number of pixels per label (w.r.t. num of pixels in image);
 % this puts a cap on the number of training samples and can improve training speed
 
