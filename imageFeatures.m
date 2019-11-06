@@ -57,7 +57,7 @@ if ~isempty(sfSigmas)
     for sigma = sfSigmas
         featIndex = featIndex+1;
         featNames{featIndex} = sprintf('sigma%dsteer',sigma);
-        F = cat(3,F,steerableDetector(I,4,sigma));
+        F = cat(3,F,single(steerableDetector(double(I),4,sigma))); % hot fix to allow single precision for steerable detecter
     end
 end
 

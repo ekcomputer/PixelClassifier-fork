@@ -125,6 +125,10 @@ model.radii = radii;
 model.cfSigma = cfSigma;
 model.logSigmas = logSigmas;
 model.sfSigmas = sfSigmas;
+model.oobPredError=oobPredError;
+model.featImp=featImp;
+model.featNames=featNames;
+model.env=env;
 save(modelPath,'model');
 
 disp('done training')

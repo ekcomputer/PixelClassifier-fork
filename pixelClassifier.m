@@ -5,16 +5,16 @@ Env_PixelClassifier % load environment vars
 testPath = env.output.test_dir;
 % where images are
 
-outputMasks = true;
+outputMasks = env.pixelClassifier.run.outputMasks;
 % if to output binary masks corresponding to pixel classes
 
-outputProbMaps = false; %true;
+outputProbMaps = env.pixelClassifier.run.outputProbMaps; %true;
 % if to output probability maps from which output masks are derived
 
 modelPath = env.output.current_model;
 % where the model is
 
-nSubsets = 100;
+nSubsets = env.pixelClassifier.run.nSubsets;
 % the set of pixels to be classified is split in this many subsets;
 % if nSubsets > 1, the subsets are classified using 'parfor' with
 % the currently-opened parallel pool (or a new default one if none is open);
@@ -38,7 +38,7 @@ files = dir(testPath);
 nImages = 0;
 for i = 1:length(files)
     fName = files(i).name;
-    if ~contains(fName,'.db') && ~contains(fName,'Class') && fName(1) ~= '.'
+    if ~contains(fName,'.db') && ~contains(fName,'cls') && ~contains(fName,'Class') && fName(1) ~= '.' && endsWith(fName,'.tif')
         nImages = nImages+1;
         imagePaths{nImages} = [testPath filesep fName];
     end
@@ -47,11 +47,19 @@ end
 %% classify
 
 for imIndex = 1:length(imagePaths)
-    fprintf('classifying image %d of %d...',imIndex,length(imagePaths));
     I = imreadGrayscaleDouble(imagePaths{imIndex});
-
+    nBands=size(I, 3);
     tic
-    F = imageFeatures(I,model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas);
+    for band=1:nBands
+        fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+        F0 = imageFeatures(I(:,:,band),model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas);
+        if band==1
+            F=F0;
+        else
+            F=cat(3,F,F0);
+        end
+    end
+    fprintf('classifying image %d of %d...',imIndex,length(imagePaths));
     [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
     fprintf('time: %f s\n', toc);
 
@@ -74,3 +82,5 @@ for n=1:length(imagePaths)
 %     g(n).basename=[g(n).basename, '.tif'];
     addOutputImages(g(n).basename);
 end
+
+fprintf('Combined output images to: %s\n', env.output.test_dir)
