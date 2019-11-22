@@ -113,7 +113,11 @@ ft=[training.ft];
 fprintf('training...'); tic
 [treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize);
 figureQSS
-subplot(1,2,1), barh(featImp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
+subplot(1,2,1), 
+featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands, ]);
+barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
+legend_txt=cellstr(num2str([1:nBands]'));
+legend(legend_txt, 'Location', 'best', 'FontSize', 12);
 subplot(1,2,2), plot(oobPredError), title('out-of-bag classification error')
 fprintf('training time: %f s\n', toc);
 

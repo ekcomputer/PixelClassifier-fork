@@ -4,7 +4,9 @@ F = [];
 featIndex = 0;
 featNames = {};
 if use_raw_image
-    F=I; % just use original image w/o filters!
+    featIndex = featIndex+1;
+    featNames{featIndex} = sprintf('rawImage');
+    F=cat(3, F, I); % just use original image w/o filters!
 end
 if ~isempty(sigmas)
     derivNames = {'d0','dx','dy','dxx','dxy','dyy','hessEV1','hessEV2'};
