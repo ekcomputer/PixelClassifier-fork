@@ -1,23 +1,26 @@
-function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas)
+function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows)
 
 F = [];
 featIndex = 0;
 featNames = {};
-
-derivNames = {'d0','dx','dy','dxx','dxy','dyy','hessEV1','hessEV2'};
-for sigma = sigmas
-    for i = 1:length(derivNames)
-        featIndex = featIndex+1;
-        featNames{featIndex} = [sprintf('sigma%d',sigma) derivNames{i}];
-    end
-    D = zeros(size(I,1),size(I,2),8);
-    [D(:,:,1),D(:,:,2),D(:,:,3),D(:,:,4),D(:,:,5),D(:,:,6),D(:,:,7),D(:,:,8)] = derivatives(I,sigma);
-    F = cat(3,F,D);
-    featIndex = featIndex+1;
-    featNames{featIndex} = sprintf('sigma%dedges',sigma);
-    F = cat(3,F,sqrt(D(:,:,2).^2+D(:,:,3).^2)); % edges
+if use_raw_image
+    F=I; % just use original image w/o filters!
 end
-
+if ~isempty(sigmas)
+    derivNames = {'d0','dx','dy','dxx','dxy','dyy','hessEV1','hessEV2'};
+    for sigma = sigmas
+        for i = 1:length(derivNames)
+            featIndex = featIndex+1;
+            featNames{featIndex} = [sprintf('sigma%d',sigma) derivNames{i}];
+        end
+        D = zeros(size(I,1),size(I,2),8);
+        [D(:,:,1),D(:,:,2),D(:,:,3),D(:,:,4),D(:,:,5),D(:,:,6),D(:,:,7),D(:,:,8)] = derivatives(I,sigma);
+        F = cat(3,F,D);
+        featIndex = featIndex+1;
+        featNames{featIndex} = sprintf('sigma%dedges',sigma);
+        F = cat(3,F,sqrt(D(:,:,2).^2+D(:,:,3).^2)); % edges
+    end
+end
 if ~isempty(offsets)
     J = filterGauss2D(I,osSigma);
     for r = offsets
@@ -61,4 +64,11 @@ if ~isempty(sfSigmas)
     end
 end
 
+if ~isempty(textureWindows)
+   for window = textureWindows
+       featIndex = featIndex+1;
+       featNames{featIndex} = sprintf('window%dtexture',window);
+       F = cat(3,F,movstd(I,window, 'omitnan' )); % need to mirror window...
+   end
+end
 end

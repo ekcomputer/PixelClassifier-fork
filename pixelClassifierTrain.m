@@ -47,10 +47,12 @@ pctMaxNPixelsPerLabel = env.pixelClassifier.pctMaxNPixelsPerLabel;
 modelPath = env.output.current_model;
 % path to where model will be saved
 
+
 % 
 % no parameters to set beyond this point
 %
-
+use_raw_image=env.pixelClassifier.use_raw_image;
+textureWindows=env.pixelClassifier.textureWindows;
 %% read images/labels
 
 [imageList,labelList,labels] = parseLabelFolder(trainPath);
@@ -89,7 +91,7 @@ for imIndex = 1:nImages % loop over images
         end
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas);
+        [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows);
         if band==1 % only compute labels for first band of image
             [rfFeat,rfLbl] = rfFeatAndLab(F,L);
         else
@@ -128,7 +130,12 @@ model.sfSigmas = sfSigmas;
 model.oobPredError=oobPredError;
 model.featImp=featImp;
 model.featNames=featNames;
+model.use_raw_image=use_raw_image;
+model.textureWindows=textureWindows;
 model.env=env;
 save(modelPath,'model');
 
 disp('done training')
+
+%% classify, without having to click again
+pixelClassifier
