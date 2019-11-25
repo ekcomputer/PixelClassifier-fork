@@ -86,7 +86,7 @@ for imIndex = 1:nImages % loop over images
 %     training(band).lb = [];
     for band=1:nBands % loop over bands w/i image
         if nBands~=size(imageList{imIndex}, 3)
-            txt=sprintf('Number of bands in image %d is %d, while it is %d in image 1.', band,size(imageList{imIndex}, 3), size(imageList{1}, 3));
+            txt=sprintf('EK: Number of bands in image %d is %d, while it is %d in image 1.', band,size(imageList{imIndex}, 3), size(imageList{1}, 3));
             error(txt);
         end
         training(band).ft = [];
@@ -100,17 +100,30 @@ for imIndex = 1:nImages % loop over images
         training(band).ft = [training(band).ft; rfFeat];
     end
     lb = [lb; rfLbl];
+    imageList{imIndex}=[]; % clear to save memory
 end
 % clear F % save memory
 fprintf('time spent computing features: %f s\n', toc);
 
 %% concat training matrices (one for each band)
-ft=[training.ft];
+    % save original total features and labels before partitioning
+ft_all=[training.ft];
 % lb=[training.lb];
-
+lb_all=lb; clear lb; 
+%% split into training and val datasets
+    % lb and ft are training partitions, lb_val and ft_val are validation
+    % partitions, lb_all and ft_all include both
+global env
+rng(env.seed);
+c = cvpartition(lb_all,'KFold',env.valPartitionRatio);
+ft=ft_all(c.training(1),:);
+lb=lb_all(c.training(1));
+ft_val=ft_all(c.test(1),:);
+lb_val=lb_all(c.test(1));
 %% training
 
 fprintf('training...'); tic
+% rng('shuffle')
 [treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize);
 figureQSS
 subplot(1,2,1), 
@@ -121,6 +134,13 @@ legend(legend_txt, 'Location', 'best', 'FontSize', 12);
 subplot(1,2,2), plot(oobPredError), title('out-of-bag classification error')
 fprintf('training time: %f s\n', toc);
 
+%% validation: confusion matrix on only test subset of image
+    % reconstruct F
+% F=cat(3, F{1}, F{2}, F{3});
+% imL = imClassify(F,treeBag,1);
+[~,scores] = predict(treeBag,ft_val); % can use ft_all, but that might be cheating
+[~,lb_val_test] = max(scores,[],2);
+[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_val,lb_val_test, env.class_names);
 %% save model
 
 model.treeBag = treeBag;
@@ -137,6 +157,7 @@ model.featNames=featNames;
 model.use_raw_image=use_raw_image;
 model.textureWindows=textureWindows;
 model.env=env;
+model.validation=v;
 save(modelPath,'model');
 
 disp('done training')
