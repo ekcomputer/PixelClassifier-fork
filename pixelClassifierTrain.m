@@ -1,5 +1,6 @@
-clear, clc
-
+clear
+% clc
+fprintf('\n\n')
 %% set parameters
 Env_PixelClassifier % load environment vars
 trainPath = env.output.train_dir;
@@ -163,4 +164,5 @@ save(modelPath,'model');
 disp('done training')
 
 %% classify, without having to click again
+drawnow
 pixelClassifier
