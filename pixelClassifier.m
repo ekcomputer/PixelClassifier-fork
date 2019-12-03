@@ -1,5 +1,6 @@
-clear, clc
-tic
+clear, 
+% clc
+fprintf('\n\n')
 %% set parameters
 Env_PixelClassifier % load environment vars
 testPath = env.output.test_dir;
