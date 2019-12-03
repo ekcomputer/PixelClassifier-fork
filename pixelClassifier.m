@@ -1,5 +1,5 @@
 clear, clc
-
+tic
 %% set parameters
 Env_PixelClassifier % load environment vars
 testPath = env.output.test_dir;
@@ -21,7 +21,8 @@ nSubsets = env.pixelClassifier.run.nSubsets;
 % see imClassify.m for details;
 % it's recommended to set nSubsets > the number of cores in the parallel pool;
 % this can make classification substantially faster than when a
-% single thread is used (nSubsets = 1).
+% single thread is used (nSubsets = 1).  Divides image into nSubsets
+% parts to classify, so numel(F)/nSubsets should fit into memory
 
 % 
 % no parameters to set beyond this point
@@ -75,7 +76,7 @@ for imIndex = 1:length(imagePaths)
 end
 
 disp('done classifying')
-
+toc
 %% combine images
 for n=1:length(imagePaths)
     [~, g(n).basename, ~]=fileparts(imagePaths{n});
