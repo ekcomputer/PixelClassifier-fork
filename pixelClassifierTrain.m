@@ -125,7 +125,7 @@ lb_val=lb_all(c.test(1));
 
 fprintf('training...'); tic
 % rng('shuffle')
-[treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize);
+[treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize, env.seed);
 figureQSS
 subplot(1,2,1), 
 featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands, ]);
@@ -165,4 +165,4 @@ disp('done training')
 
 %% classify, without having to click again
 drawnow
-pixelClassifier
+% pixelClassifier
