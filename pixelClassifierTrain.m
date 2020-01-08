@@ -58,11 +58,16 @@ textureWindows=env.pixelClassifier.textureWindows;
 
 [imageList,labelList,labels] = parseLabelFolder(trainPath);
 nLabels = length(labels);
+nImages = length(imageList);
 
+%% remove image no data masks
+for imageIndex=1:nImages
+    sImage=size(imageList{imageIndex}, 3);
+    imageList{imageIndex}(repmat(isnan(imageList{imageIndex}(:,:,sImage)), [1, 1, sImage]))=env.constants.noDataValue;
+end
 %% training samples cap
 
 maxNPixelsPerLabel = (pctMaxNPixelsPerLabel/100)*size(imageList{1},1)*size(imageList{1},2);
-nImages = length(imageList);
 for imIndex = 1:nImages
     L = labelList{imIndex};
     for labelIndex = 1:nLabels
@@ -92,13 +97,18 @@ for imIndex = 1:nImages % loop over images
         end
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows);
+        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc')
+            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows);
+        else % last band is range band- only use raw image
+                % here, F gets rewritten for each band
+            [F,~] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, []);
+        end
         if band==1 % only compute labels for first band of image
-            [rfFeat,rfLbl] = rfFeatAndLab(F,L);
+            [rfFeat,rfLbl] = rfFeatAndLab(F,L);            
         else
             rfFeat = rfFeatAndLab(F, L);
         end
-        training(band).ft = [training(band).ft; rfFeat];
+        training(band).ft = [training(band).ft; rfFeat]; % can just say training(band).ft = rfFeat; ...
     end
     lb = [lb; rfLbl];
     imageList{imIndex}=[]; % clear to save memory
@@ -128,7 +138,11 @@ fprintf('training...'); tic
 [treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize, env.seed);
 figureQSS
 subplot(1,2,1), 
-featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands, ]);
+if strcmp(env.inputType, 'Freeman-inc')
+    featImp=[featImp, [0]]; 
+else
+end
+featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands ]); %% <----HERE
 barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
 legend_txt=cellstr(num2str([1:nBands]'));
 legend(legend_txt, 'Location', 'best', 'FontSize', 12);

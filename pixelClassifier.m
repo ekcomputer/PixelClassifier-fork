@@ -52,14 +52,15 @@ for imIndex = 1:length(imagePaths)
     I = imreadGrayscaleDouble(imagePaths{imIndex});
     nBands=size(I, 3);
     tic
+    F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        F0 = imageFeatures(I(:,:,band),model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas, model.use_raw_image, model.textureWindows);
-        if band==1
-            F=F0;
-        else
-            F=cat(3,F,F0);
+        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc')
+            F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas, model.use_raw_image, model.textureWindows));
+        else % for incidence angle band
+            F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, []));
         end
+%         F=cat(3,F,F0); clear F0;
     end
     fprintf('classifying image %d of %d...',imIndex,length(imagePaths));
     [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
