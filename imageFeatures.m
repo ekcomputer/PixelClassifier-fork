@@ -1,4 +1,4 @@
-function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows)
+function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter)
 
 F = [];
 featIndex = 0;
@@ -72,5 +72,10 @@ if ~isempty(textureWindows)
        featNames{featIndex} = sprintf('window%dtexture',window);
        F = cat(3,F,movstd(I,window, 'omitnan' )); % need to mirror window...
    end
+end
+if ~isempty(speckleFilter)
+    featIndex = featIndex+1;
+    featNames{featIndex} = 'speckleFilter';
+    F = cat(3,F,imguidedfilter(I));
 end
 end

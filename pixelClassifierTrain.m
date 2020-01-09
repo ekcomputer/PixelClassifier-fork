@@ -49,11 +49,14 @@ modelPath = env.output.current_model;
 % path to where model will be saved
 
 
+
+use_raw_image=env.pixelClassifier.use_raw_image;
+textureWindows=env.pixelClassifier.textureWindows;
+speckleFilter=env.pixelClassifier.speckleFilter;
+
 % 
 % no parameters to set beyond this point
 %
-use_raw_image=env.pixelClassifier.use_raw_image;
-textureWindows=env.pixelClassifier.textureWindows;
 %% read images/labels
 
 [imageList,labelList,labels] = parseLabelFolder(trainPath);
@@ -98,10 +101,10 @@ for imIndex = 1:nImages % loop over images
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc')
-            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows);
+            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter);
         else % last band is range band- only use raw image
                 % here, F gets rewritten for each band
-            [F,~] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, []);
+            [F,~] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, [], []);
         end
         if band==1 % only compute labels for first band of image
             [rfFeat,rfLbl] = rfFeatAndLab(F,L);            
@@ -139,7 +142,7 @@ fprintf('training...'); tic
 figureQSS
 subplot(1,2,1), 
 if strcmp(env.inputType, 'Freeman-inc')
-    featImp=[featImp, [0]]; 
+    featImp=[featImp, [0 0]]; 
 else
 end
 featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands ]); %% <----HERE
@@ -153,9 +156,9 @@ fprintf('training time: %f s\n', toc);
     % reconstruct F
 % F=cat(3, F{1}, F{2}, F{3});
 % imL = imClassify(F,treeBag,1);
-[~,scores] = predict(treeBag,ft_val); % can use ft_all, but that might be cheating
+[~,scores] = predict(treeBag,ft_val); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
 [~,lb_val_test] = max(scores,[],2);
-[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_val,lb_val_test, env.class_names);
+[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_val,lb_val_test, env.class_names); %% <======= HERE 1/9
 %% save model
 
 model.treeBag = treeBag;
@@ -171,6 +174,7 @@ model.featImp=featImp;
 model.featNames=featNames;
 model.use_raw_image=use_raw_image;
 model.textureWindows=textureWindows;
+model.speckleFilter=speckleFilter;
 model.env=env;
 model.validation=v;
 save(modelPath,'model');
