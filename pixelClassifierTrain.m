@@ -89,9 +89,11 @@ end
 
 tic
 nBands=size(imageList{1}, 3);
+lb_all=[];
+ft_all=[]; %double.empty(0,nBands); % initilize
 for imIndex = 1:nImages % loop over images 
-    L = labelList{imIndex};
-    lb=[];
+    L = labelList{imIndex}; labelList{imIndex}=[]; % save mem
+    ft_band=[];
 %     training(band).lb = [];
     for band=1:nBands % loop over bands w/i image
         if nBands~=size(imageList{imIndex}, 3)
@@ -104,16 +106,20 @@ for imIndex = 1:nImages % loop over images
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter);
         else % last band is range band- only use raw image
                 % here, F gets rewritten for each band
-            [F,~] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, [], []);
+            [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, [], []);
+            featNames(end+1)=featNames_last_band;
         end
-        if band==1 % only compute labels for first band of image
-            [rfFeat,rfLbl] = rfFeatAndLab(F,L);            
-        else
-            rfFeat = rfFeatAndLab(F, L);
-        end
-        training(band).ft = [training(band).ft; rfFeat]; % can just say training(band).ft = rfFeat; ...
+%         if band==1 && strcmp(env.inputType, 'Freeman-inc') % only compute labels for first band of image
+%             [rfFeat,lb] = rfFeatAndLab(F,L);            
+%         else
+%             rfFeat = rfFeatAndLab(F, L);
+%         end
+        [rfFeat,lb_band] = rfFeatAndLab(F,L);
+        ft_band = [ft_band, rfFeat]; % can just say training(band).ft = rfFeat; ...
     end
-    lb = [lb; rfLbl];
+%     lb_all = [lb_all; rfLbl];
+    lb_all=[lb_all; lb_band];
+    ft_all=[ft_all; ft_band];
     imageList{imIndex}=[]; % clear to save memory
 end
 % clear F % save memory
@@ -121,15 +127,15 @@ fprintf('time spent computing features: %f s\n', toc);
 
 %% concat training matrices (one for each band)
     % save original total features and labels before partitioning
-ft_all=[training.ft];
+% ft_all=[training.ft];
 % lb=[training.lb];
-lb_all=lb; clear lb; 
+% lb_all=lb; clear lb; 
 %% split into training and val datasets
     % lb and ft are training partitions, lb_val and ft_val are validation
     % partitions, lb_all and ft_all include both
 global env
 rng(env.seed);
-c = cvpartition(lb_all,'KFold',env.valPartitionRatio);
+c = cvpartition(lb_all,'Holdout',env.valPartitionRatio);
 ft=ft_all(c.training(1),:);
 lb=lb_all(c.training(1));
 ft_val=ft_all(c.test(1),:);
@@ -142,12 +148,14 @@ fprintf('training...'); tic
 figureQSS
 subplot(1,2,1), 
 if strcmp(env.inputType, 'Freeman-inc')
-    featImp=[featImp, [0 0]]; 
+%     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
+    featImp=[featImp, zeros(1, length(featNames)-2)]; 
 else
 end
 featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands ]); %% <----HERE
 barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
-legend_txt=cellstr(num2str([1:nBands]'));
+legend_txt=env.plot.bandLabels;
+% legend_txt=cellstr(num2str([1:nBands]'));
 legend(legend_txt, 'Location', 'best', 'FontSize', 12);
 subplot(1,2,2), plot(oobPredError), title('out-of-bag classification error')
 fprintf('training time: %f s\n', toc);
