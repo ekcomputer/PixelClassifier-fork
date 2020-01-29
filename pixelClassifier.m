@@ -58,7 +58,7 @@ for imIndex = 1:length(imagePaths)
     F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc')
+        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc') || ~strcmp(env.inputType, 'C3-inc') || ~strcmp(env.inputType, 'Norm-Fr-C11-inc') 
             F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas, model.use_raw_image, model.textureWindows, model.speckleFilter));
         else % for incidence angle band
             F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], []));

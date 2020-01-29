@@ -102,7 +102,7 @@ for imIndex = 1:nImages % loop over images
         end
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc') || ~strcmp(env.inputType, 'C3-inc')
+        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc') || ~strcmp(env.inputType, 'C3-inc') || ~strcmp(env.inputType, 'Norm-Fr-C11-inc') 
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter);
         else % last band is range band- only use raw image
                 % here, F gets rewritten for each band
@@ -138,8 +138,8 @@ rng(env.seed);
 c = cvpartition(lb_all,'Holdout',env.valPartitionRatio);
 ft=ft_all(c.training(1),:);
 lb=lb_all(c.training(1));
-ft_val=ft_all(c.test(1),:);
-lb_val=lb_all(c.test(1));
+ft_subset_validation=ft_all(c.test(1),:);
+lb_subset_validation=lb_all(c.test(1));
 %% training
 
 fprintf('training...'); tic
@@ -167,9 +167,9 @@ fprintf('training time: %f s\n', toc);
     % reconstruct F
 % F=cat(3, F{1}, F{2}, F{3});
 % imL = imClassify(F,treeBag,1);
-[~,scores] = predict(treeBag,ft_val); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
+[~,scores] = predict(treeBag,ft_subset_validation); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
 [~,lb_val_test] = max(scores,[],2);
-[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_val,lb_val_test, env.class_names); %% <======= HERE 1/9
+[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test, env.class_names); %% <======= HERE 1/9
 %% save model
 
 model.treeBag = treeBag;
