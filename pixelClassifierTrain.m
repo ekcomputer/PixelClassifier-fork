@@ -102,7 +102,7 @@ for imIndex = 1:nImages % loop over images
         end
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc')
+        if band~=nBands || ~strcmp(env.inputType, 'Freeman-inc') || ~strcmp(env.inputType, 'C3-inc')
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter);
         else % last band is range band- only use raw image
                 % here, F gets rewritten for each band
@@ -150,6 +150,9 @@ subplot(1,2,1),
 if strcmp(env.inputType, 'Freeman-inc')
 %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
     featImp=[featImp, zeros(1, length(featNames)-2)]; 
+elseif strcmp(env.inputType, 'C3-inc')
+%     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
+    featImp=[featImp, zeros(1, length(featNames)-2)]; %%HERE TODO
 else
 end
 featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands ]); %% <----HERE

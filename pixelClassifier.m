@@ -72,10 +72,10 @@ for imIndex = 1:length(imagePaths)
     [fpath,fname] = fileparts(imagePaths{imIndex});
     for pmIndex = 1:size(classProbs,3)
         if outputMasks
-            imwrite(imL == pmIndex,[fpath filesep fname sprintf('_Class%d.png',pmIndex)]);
+            imwrite(imL == pmIndex,[fpath filesep fname sprintf('_Class%02d.png',pmIndex)]);
         end
         if outputProbMaps
-            imwrite(classProbs(:,:,pmIndex),[fpath filesep fname sprintf('_Class%d_PM.png',pmIndex)]);
+            imwrite(classProbs(:,:,pmIndex),[fpath filesep fname sprintf('_Class%02d_PM.png',pmIndex)]);
         end
     end
 end
