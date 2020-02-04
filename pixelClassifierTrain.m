@@ -136,11 +136,13 @@ fprintf('time spent computing features: %f s\n', toc);
 global env
 rng(env.seed);
 c = cvpartition(lb_all,'Holdout',env.valPartitionRatio);
-lb_all=categorical(lb_all);
+for p=1:length(lb_all)
+    lb_all_cell{p}=env.class_names{lb_all(p)};
+end
 ft=ft_all(c.training(1),:);
-lb=lb_all(c.training(1));
+lb=lb_all_cell(c.training(1));
 ft_subset_validation=ft_all(c.test(1),:);
-lb_subset_validation=lb_all(c.test(1));
+lb_subset_validation=lb_all_cell(c.test(1));
 %% training
 
 fprintf('training...'); tic
@@ -169,9 +171,11 @@ fprintf('training time: %f s\n', toc);
 % F=cat(3, F{1}, F{2}, F{3});
 % imL = imClassify(F,treeBag,1);
 [~,scores] = predict(treeBag,ft_subset_validation); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
-[~,lb_val_test_numerical] = max(scores,[],2);
-lb_val_test_categorical=categorical(lb_val_test_numerical);
-[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_categorical, env.class_names); %% <======= HERE 1/9
+[~,lb_val_test] = max(scores,[],2);
+for p=1:length(lb_val_test)
+    lb_val_test_cell{p}=env.class_names{lb_val_test(p)};
+end
+[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_cell, env.class_names); %% <======= HERE 1/9
 %% save model
 
 model.treeBag = treeBag;
