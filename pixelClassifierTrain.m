@@ -137,7 +137,7 @@ global env
 rng(env.seed);
 c = cvpartition(lb_all,'Holdout',env.valPartitionRatio);
 for p=1:length(lb_all)
-    lb_all_cell{p}=env.class_names{lb_all(p)};
+    lb_all_cell{p}=sprintf('%02d-%s',lb_all(p), env.class_names{lb_all(p)});
 end
 ft=ft_all(c.training(1),:);
 lb=lb_all_cell(c.training(1));
@@ -173,7 +173,7 @@ fprintf('training time: %f s\n', toc);
 [~,scores] = predict(treeBag,ft_subset_validation); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
 [~,lb_val_test] = max(scores,[],2);
 for p=1:length(lb_val_test)
-    lb_val_test_cell{p}=env.class_names{lb_val_test(p)};
+    lb_val_test_cell{p}=sprintf('%02d-%s',lb_val_test(p), env.class_names{lb_val_test(p)});
 end
 [v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_cell, env.class_names); %% <======= HERE 1/9
 %% save model
