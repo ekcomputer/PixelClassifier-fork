@@ -86,7 +86,9 @@ toc
 for n=1:length(imagePaths)
     [~, g(n).basename, ~]=fileparts(imagePaths{n});
 %     g(n).basename=[g(n).basename, '.tif'];
-    addOutputImages(g(n).basename);
+    try addOutputImages(g(n).basename);
+    catch
+    end
 end
 
 fprintf('Combined output images to: %s\n', env.output.test_dir)
