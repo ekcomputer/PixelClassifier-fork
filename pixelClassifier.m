@@ -65,7 +65,7 @@ for imIndex = 1:length(imagePaths)
         end
 %         F=cat(3,F,F0); clear F0;
     end
-    fprintf('classifying image %d of %d...',imIndex,length(imagePaths));
+    fprintf('classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
     [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
     fprintf('time: %f s\n', toc);
 
@@ -88,6 +88,7 @@ for n=1:length(imagePaths)
 %     g(n).basename=[g(n).basename, '.tif'];
     try addOutputImages(g(n).basename);
     catch
+        warning('Not able to add output images.')
     end
 end
 
