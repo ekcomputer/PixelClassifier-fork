@@ -88,7 +88,7 @@ for n=1:length(imagePaths)
 %     g(n).basename=[g(n).basename, '.tif'];
     try addOutputImages(g(n).basename);
     catch
-        warning('Not able to add output images.')
+        warning('Not able to add output images for: %s.', g(n).basename);
     end
 end
 
