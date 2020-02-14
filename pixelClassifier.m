@@ -47,8 +47,8 @@ for i = 1:length(files)
 end
 
 %% classify
-
-for imIndex = 1:length(imagePaths)
+parpool(2)
+parfor imIndex = 1:length(imagePaths)
     I = imreadGrayscaleDouble(imagePaths{imIndex});
     nBands=size(I, 3);
         % remove NaN's
@@ -66,7 +66,11 @@ for imIndex = 1:length(imagePaths)
 %         F=cat(3,F,F0); clear F0;
     end
     fprintf('classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
-    [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
+    try
+        [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
+    catch % if out of memory
+        fprintf('Error during classifying:  %s\n', imagePaths{imIndex});
+    end
     fprintf('time: %f s\n', toc);
 
     [fpath,fname] = fileparts(imagePaths{imIndex});
@@ -87,8 +91,9 @@ for n=1:length(imagePaths)
     [~, g(n).basename, ~]=fileparts(imagePaths{n});
 %     g(n).basename=[g(n).basename, '.tif'];
     try addOutputImages(g(n).basename);
+        fprintf('Combining:\t%s\n', g(n).basename);
     catch
-        warning('Not able to add output images for: %s.', g(n).basename);
+        warning('Not able to add output images for: %s.\n', g(n).basename);
     end
 end
 
