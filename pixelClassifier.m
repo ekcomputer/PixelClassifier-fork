@@ -47,8 +47,8 @@ for i = 1:length(files)
 end
 
 %% classify
-parpool(2)
-parfor imIndex = 1:length(imagePaths)
+% parpool(2)
+for imIndex = 1:length(imagePaths)
     I = imreadGrayscaleDouble(imagePaths{imIndex});
     nBands=size(I, 3);
         % remove NaN's
