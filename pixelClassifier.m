@@ -47,8 +47,8 @@ for i = 1:length(files)
 end
 
 %% classify
-parpool(2)
-parfor imIndex = 1:length(imagePaths)
+% parpool(2)
+for imIndex = 1:length(imagePaths)
     I = imreadGrayscaleDouble(imagePaths{imIndex});
     nBands=size(I, 3);
         % remove NaN's
@@ -87,7 +87,7 @@ end
 disp('done classifying')
 toc
 %% combine images
-for n=1:length(imagePaths)
+parfor n=1:length(imagePaths)
     [~, g(n).basename, ~]=fileparts(imagePaths{n});
 %     g(n).basename=[g(n).basename, '.tif'];
     try addOutputImages(g(n).basename);
