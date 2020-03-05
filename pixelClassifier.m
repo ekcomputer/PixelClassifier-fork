@@ -87,7 +87,7 @@ end
 disp('done classifying')
 toc
 %% combine images
-for n=1:length(imagePaths) % somehow parfor no works
+for n=1:length(imagePaths)
     [~, g(n).basename, ~]=fileparts(imagePaths{n});
 %     g(n).basename=[g(n).basename, '.tif'];
     try addOutputImages(g(n).basename);
