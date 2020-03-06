@@ -1,5 +1,9 @@
-function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter)
-
+function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter, varargin)
+if ~isempty(varargin)
+    name=varargin{1}; % names of input files (used for translation filter)
+else
+    name='NaN'; % hidden error
+end
 F = [];
 featIndex = 0;
 featNames = {};
@@ -27,7 +31,13 @@ if ~isempty(offsets)
     J = filterGauss2D(I,osSigma);
     for r = offsets
         aIndex = 0;
-        for a = 0:pi/4:2*pi-pi/4
+        try % if no name input or problem with name parsing
+            heading = CalculateRangeHeading(name);
+        catch
+            heading = [pi/2, 3*pi/2];
+            warning('\tCalculateRangeHeading failed.  Using default of 90 and 270 deg.')
+        end
+        for a = heading  % translation angles 
             aIndex = aIndex+1;
             v = r*[cos(a) sin(a)];
             T = imtranslate(J,v,'OutputView','same');

@@ -1,4 +1,4 @@
-function [imageList,labelList,classIndices] = parseLabelFolder(dirPath)
+function [imageList,labelList,classIndices, names] = parseLabelFolder(dirPath)
 % reads images and generates class-balanced labels from annotations
 
 files = dir(dirPath);
@@ -33,14 +33,15 @@ nClasses = length(classIndices);
 % read images/labels
 imageList = cell(1,nImages);
 labelList = cell(1,nImages);
+clear imn
 for i = 1:nImages
-    I = imreadGrayscaleDouble(imagePaths{i});
-    [imp,imn] = fileparts(imagePaths{i});
+    [I, R] = geotiffread(imagePaths{i});
+    [imp,imn{i}] = fileparts(imagePaths{i});
     
     nSamplesPerClass = zeros(1,nClasses);
     lbMaps = cell(1,nClasses);
     for j = 1:nClasses
-        classJ = imread([imp filesep imn sprintf('_Class%02d.tif',classIndices(j))]);
+        classJ = imread([imp filesep imn{i} sprintf('_Class%02d.tif',classIndices(j))]);
         classJ = (classJ(:,:,1) > 0);
         nSamplesPerClass(j) = sum(classJ(:));
         lbMaps{j} = classJ;
@@ -61,5 +62,10 @@ for i = 1:nImages
     imageList{i} = I;
     labelList{i} = L;
 end
-
+try
+    names=parseTrainingFileNames(imn); % removes suffix
+catch
+    warning('parseTrainingFileNames failed.  Using default of imn')
+    names=imn;
+end
 end

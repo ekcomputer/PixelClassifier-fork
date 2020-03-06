@@ -43,9 +43,16 @@ for i = 1:length(files)
     if ~contains(fName,'.db') && ~contains(fName,'cls') && ~contains(fName,'Class') && fName(1) ~= '.' && endsWith(fName,'.tif')
         nImages = nImages+1;
         imagePaths{nImages} = [testPath filesep fName];
+        names_raw{nImages}=fName;
     end
 end
-
+%% parse names 
+try
+    names=parseTrainingFileNames(names_raw); % removes suffix
+catch
+    warning('parseTrainingFileNames failed.  Using default of ''NoNameFound''')
+    names={'NoNameFound'};
+end
 %% classify
 % parpool(2)
 for imIndex = 1:length(imagePaths)
@@ -59,7 +66,7 @@ for imIndex = 1:length(imagePaths)
     for band=1:nBands
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         if band~=nBands && (strcmp(env.inputType, 'Freeman-inc') || strcmp(env.inputType, 'C3-inc') || strcmp(env.inputType, 'Norm-Fr-C11-inc') )
-            F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas, model.use_raw_image, model.textureWindows, model.speckleFilter));
+            F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,model.offsets,model.osSigma,model.radii,model.cfSigma,model.logSigmas,model.sfSigmas, model.use_raw_image, model.textureWindows, model.speckleFilter, names{imIndex}));
         else % for incidence angle band
             F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], []));
         end
@@ -69,7 +76,7 @@ for imIndex = 1:length(imagePaths)
     try
         [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
     catch % if out of memory
-        fprintf('Error during classifying:  %s\n', imagePaths{imIndex});
+        fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
     end
     fprintf('time: %f s\n', toc);
 

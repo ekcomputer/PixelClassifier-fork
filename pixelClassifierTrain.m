@@ -59,7 +59,7 @@ speckleFilter=env.pixelClassifier.speckleFilter;
 %
 %% read images/labels
 
-[imageList,labelList,labels] = parseLabelFolder(trainPath);
+[imageList,labelList,labels, names] = parseLabelFolder(trainPath);
 nLabels = length(labels);
 nImages = length(imageList);
 
@@ -103,7 +103,7 @@ for imIndex = 1:nImages % loop over images
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         if band~=nBands && (strcmp(env.inputType, 'Freeman-inc') || strcmp(env.inputType, 'C3-inc') || strcmp(env.inputType, 'Norm-Fr-C11-inc') )
-            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter);
+            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter, names{imIndex});
         else % last band is range band- only use raw image
                 % here, F gets rewritten for each band
             [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, [], []);
