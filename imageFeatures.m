@@ -1,6 +1,8 @@
 function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter, varargin)
 if ~isempty(varargin)
     name=varargin{1}; % names of input files (used for translation filter)
+    R=varargin{2}; % map ref object
+    mapinfo=varargin{3}; % map info, incl projection
 else
     name='NaN'; % hidden error
 end
@@ -32,7 +34,7 @@ if ~isempty(offsets)
     for r = offsets
         aIndex = 0;
         try % if no name input or problem with name parsing
-            heading = CalculateRangeHeading(name);
+            heading = CalculateRangeHeading(name, R, mapinfo);
         catch
             heading = [pi/2, 3*pi/2];
             warning('\tCalculateRangeHeading failed.  Using default of 90 and 270 deg.')

@@ -1,4 +1,4 @@
-function [imageList,labelList,classIndices, names] = parseLabelFolder(dirPath)
+function [imageList,labelList,classIndices, names, varargout] = parseLabelFolder(dirPath)
 % reads images and generates class-balanced labels from annotations
 
 files = dir(dirPath);
@@ -36,6 +36,7 @@ labelList = cell(1,nImages);
 clear imn
 for i = 1:nImages
     [I, R] = geotiffread(imagePaths{i});
+    info=geotiffinfo(imagePaths{i});
     [imp,imn{i}] = fileparts(imagePaths{i});
     
     nSamplesPerClass = zeros(1,nClasses);
@@ -61,11 +62,19 @@ for i = 1:nImages
 
     imageList{i} = I;
     labelList{i} = L;
+    maprefs{i}=R;
+    mapinfos{i}=info;
 end
 try
     names=parseTrainingFileNames(imn); % removes suffix
 catch
     warning('parseTrainingFileNames failed.  Using default of imn')
     names=imn;
+end
+try
+    varargout{1}=maprefs; % save output georef info
+    varargout{2}=mapinfos; % save output georef info
+catch
+    warning('no varargout')
 end
 end
