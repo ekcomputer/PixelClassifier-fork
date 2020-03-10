@@ -36,10 +36,10 @@ if ~isempty(offsets)
         try % if no name input or problem with name parsing
             heading = CalculateRangeHeading(name, R, mapinfo);
         catch
-            heading = [pi/2, 3*pi/2];
-            warning('\tCalculateRangeHeading failed.  Using default of 90 and 270 deg.')
+            heading = [pi/2, 3*pi/2]';
+            warning('CalculateRangeHeading failed.  Check .ann file.  Using default of 90 and 270 deg.')
         end
-        for a = heading  % translation angles 
+        for a = heading'  % translation angles 
             aIndex = aIndex+1;
             v = r*[cos(a) sin(a)];
             T = imtranslate(J,v,'OutputView','same');
