@@ -1,5 +1,5 @@
 function [imageList,labelList,classIndices, names, varargout] = parseLabelFolder(dirPath)
-% reads images and generates class-balanced labels from annotations
+% reads tif images and generates class-balanced labels from annotations
 
 files = dir(dirPath);
 
@@ -9,8 +9,7 @@ for i = 1:length(files)
     fName = files(i).name;
     if ~files(i).isdir && ...
        ~contains(fName,'Class') && ...
-       ~contains(fName,'.mat') && ...
-       ~contains(fName,'.db') && ...
+       contains(fName,'.tif') && ...
        fName(1) ~= '.'
         nImages = nImages+1;
         imagePaths{nImages} = [dirPath filesep fName];
@@ -48,12 +47,12 @@ for i = 1:nImages
         lbMaps{j} = classJ;
     end
     
-    [minNSamp,indMinNSamp] = min(nSamplesPerClass);
+    [minNSamp,indMinNSamp] = min(nSamplesPerClass); % WHY this section?
     
     L = uint8(zeros(size(I, 1), size(I, 2)));
     for j = 1:nClasses
-        if j ~= indMinNSamp
-            classJ = lbMaps{j} & (rand(size(classJ)) < minNSamp/nSamplesPerClass(j));
+        if 1~=1 % j ~= indMinNSamp   % hot fix- skipping this branch
+            classJ = lbMaps{j} & (rand(size(classJ)) < minNSamp/nSamplesPerClass(j)); % THIS CAN DELETE CLASSJ if minNSamp or nSamplesPerClass == 0!
         else
             classJ = lbMaps{j};
         end

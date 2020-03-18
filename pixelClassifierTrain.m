@@ -75,11 +75,11 @@ for imIndex = 1:nImages
     L = labelList{imIndex};
     for labelIndex = 1:nLabels
         LLI = L == labelIndex;
-        nPixels = sum(sum(LLI));
+        nPixels = sum(sum(LLI)); % number of pixels of this class for this image
         rI = rand(size(L)) < maxNPixelsPerLabel/nPixels;
         L(LLI) = 0;
         LLI2 = rI & (LLI > 0);
-        L(LLI2) = labelIndex;
+        L(LLI2) = labelIndex; % randomly remove some pixels if too many training areas!
     end
     labelList{imIndex} = L;
 end
@@ -125,6 +125,9 @@ end
 % clear F % save memory
 fprintf('time spent computing features: %f s\n', toc);
 
+if isempty(lb_all)
+    error('Something''s wrong.  lb_all is empty.')
+end
 %% concat training matrices (one for each band)
     % save original total features and labels before partitioning
 % ft_all=[training.ft];
@@ -170,12 +173,16 @@ fprintf('training time: %f s\n', toc);
     % reconstruct F
 % F=cat(3, F{1}, F{2}, F{3});
 % imL = imClassify(F,treeBag,1);
-[~,scores] = predict(treeBag,ft_subset_validation); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
-[~,lb_val_test] = max(scores,[],2);
-for p=1:length(lb_val_test)
-    lb_val_test_cell{p}=sprintf('%02d-%s',lb_val_test(p), env.class_names{lb_val_test(p)});
+try
+    [~,scores] = predict(treeBag,ft_subset_validation); % can use ft_all, but that might be cheating; ft_val is a k-fold subset
+    [~,lb_val_test] = max(scores,[],2);
+    for p=1:length(lb_val_test)
+        lb_val_test_cell{p}=sprintf('%02d-%s',lb_val_test(p), env.class_names{lb_val_test(p)});
+    end
+    [v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_cell, env.class_names); %% <======= HERE 1/9
+catch
+    warning('Confusion matrix stats failed at some point.')
 end
-[v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_cell, env.class_names); %% <======= HERE 1/9
 %% save model
 
 model.treeBag = treeBag;
@@ -193,7 +200,9 @@ model.use_raw_image=use_raw_image;
 model.textureWindows=textureWindows;
 model.speckleFilter=speckleFilter;
 model.env=env;
-model.validation=v;
+try % unnecc, now that I introduced try catch for confusionchart
+    model.validation=v;
+end
 save(modelPath,'model');
 
 disp('done training')
