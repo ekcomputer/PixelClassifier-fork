@@ -79,6 +79,9 @@ for imIndex = 1:length(imagePaths)
     end
     fprintf('classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
     try
+%         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
+%         WARNING using warning('on','verbose') to query warning message
+%         SOMEHOW
         [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
     catch % if out of memory
         fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
@@ -88,25 +91,25 @@ for imIndex = 1:length(imagePaths)
     [fpath,fname] = fileparts(imagePaths{imIndex});
     for pmIndex = 1:size(classProbs,3)
         if outputMasks
-            imwrite(imL == pmIndex,[fpath filesep fname sprintf('_Class%02d.png',pmIndex)]);
+            base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
+            fprintf('\tWriting indiv. masks:\t%s\n', base_out);
+            imwrite(imL == pmIndex,[fpath filesep fname base_out]);
         end
         if outputProbMaps
-            imwrite(classProbs(:,:,pmIndex),[fpath filesep fname sprintf('_Class%02d_PM.png',pmIndex)]);
+            base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
+            fprintf('\tWriting indiv. class probs:\t%s\n', base_out);
+            imwrite(classProbs(:,:,pmIndex),[fpath filesep fname base_out]);
         end
     end
+    
+    %% Write classified image
+    try georef_out(fname, imL);
+        fprintf('Writing classified tif for:\t%s\n', fname);
+    catch
+        warning('Not able to add output images for: %s.\n', fname);
+    end   
 end
 
 disp('done classifying')
 toc
-%% combine images
-for n=1:length(imagePaths)
-    [~, g(n).basename, ~]=fileparts(imagePaths{n});
-%     g(n).basename=[g(n).basename, '.tif'];
-    try addOutputImages(g(n).basename);
-        fprintf('Combining:\t%s\n', g(n).basename);
-    catch
-        warning('Not able to add output images for: %s.\n', g(n).basename);
-    end
-end
-
-fprintf('Combined output images to: %s\n', env.output.test_dir)
+fprintf('Output images are in: %s\n', env.output.test_dir)

@@ -1,5 +1,5 @@
 function [imL,classProbs] = imClassify(imFeat,treeBag,nSubsets)
-
+global env
 [nr,nc,nVariables] = size(imFeat);
 rfFeat = reshape(imFeat,[nr*nc,nVariables]);
 
@@ -20,6 +20,21 @@ else
 
     scsubsets = cell(1,nSubsets);
     imsubsets = cell(1,nSubsets);
+    try
+        if isunix
+            nCores=str2num(getenv('SLURM_NTASKS')); % query number of tasks from slurm
+            if isempty(nCores) % not in slurm environment
+                nCores=8;
+            end
+            parpool(env.asc.parProfile, nCores)
+        else
+            parpool % use default
+        end
+        
+    catch
+        warning('Custom profile (%s) didn''t work.  Using local profile',...
+            env.asc.parProfile)
+    end
     parfor i = 1:nSubsets
         [~,scores] = predict(treeBag,ftsubsets{i});
         [~,indOfMax] = max(scores,[],2);
