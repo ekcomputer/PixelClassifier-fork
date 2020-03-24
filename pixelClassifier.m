@@ -1,6 +1,6 @@
 clear, 
 % clc
-fprintf('\n\n')
+fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting classification queue...\n')
 %% set parameters
 Env_PixelClassifier % load environment vars
 testPath = env.output.test_dir;
@@ -62,10 +62,10 @@ for imIndex = 1:length(imagePaths)
         % remove NaN's
     I(repmat(isnan(I(:,:,nBands)),...
         [1, 1, nBands]))=env.constants.noDataValue;
-    tic
+    tic;
     F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
-        fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+        fprintf('Computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         if band~=nBands && (strcmp(env.inputType, 'Freeman-inc') || strcmp(env.inputType, 'C3-inc') || strcmp(env.inputType, 'Norm-Fr-C11-inc') )
             F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
                 model.offsets,model.osSigma,model.radii,model.cfSigma,...
@@ -77,18 +77,22 @@ for imIndex = 1:length(imagePaths)
         end
 %         F=cat(3,F,F0); clear F0;
     end
-    fprintf('classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
+    fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
     try
 %         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
 %         WARNING using warning('on','verbose') to query warning message
 %         SOMEHOW
         [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
-    catch % if out of memory
+    catch e % if out of memory
         fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
+        fprintf(1,'The identifier was:\t%s\n',e.identifier);
+        fprintf(1,'There was an error! The message was:\t%s\n',e.message);
     end
     fprintf('time: %f s\n', toc);
 
     [fpath,fname] = fileparts(imagePaths{imIndex});
+    
+    %% save individ masks or class probs, if selected
     for pmIndex = 1:size(classProbs,3)
         if outputMasks
             base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
@@ -104,12 +108,12 @@ for imIndex = 1:length(imagePaths)
     
     %% Write classified image
     try georef_out(fname, imL);
-        fprintf('Writing classified tif for:\t%s\n', fname);
+        fprintf('Writing classified tif for:\t%s.\n', fname);
     catch
-        warning('Not able to add output images for: %s.\n', fname);
+        warning('Not able to write tif:\t%s.\n', fname);
     end   
 end
 
-disp('done classifying')
+fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nDone classifying.\n')
 toc
-fprintf('Output images are in: %s\n', env.output.test_dir)
+fprintf('Output images are in: %s\n\n', env.output.test_dir)
