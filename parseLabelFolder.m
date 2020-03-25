@@ -9,7 +9,7 @@ for i = 1:length(files)
     fName = files(i).name;
     if ~files(i).isdir && ...
        ~contains(fName,'Class') && ...
-       contains(fName,'.tif') && ...
+       endsWith(fName,'.tif') && ...
        fName(1) ~= '.'
         nImages = nImages+1;
         imagePaths{nImages} = [dirPath filesep fName];
@@ -28,7 +28,9 @@ for i = 1:length(files)
     end
 end
 nClasses = length(classIndices);
-
+if nClasses==0
+    error('No training classes found!')
+end
 % read images/labels
 imageList = cell(1,nImages);
 labelList = cell(1,nImages);

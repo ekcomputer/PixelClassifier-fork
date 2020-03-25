@@ -71,12 +71,13 @@ end
 %% training samples cap
 
 maxNPixelsPerLabel = (pctMaxNPixelsPerLabel/100)*size(imageList{1},1)*size(imageList{1},2);
+nPixels=zeros(nLabels, nImages); % init
 for imIndex = 1:nImages
     L = labelList{imIndex};
     for labelIndex = 1:nLabels
         LLI = L == labelIndex;
-        nPixels = sum(sum(LLI)); % number of pixels of this class for this image
-        rI = rand(size(L)) < maxNPixelsPerLabel/nPixels;
+        nPixels(labelIndex,imIndex) = sum(sum(LLI)); % number of pixels of this class for this image
+        rI = rand(size(L)) < maxNPixelsPerLabel/nPixels(labelIndex,imIndex);
         L(LLI) = 0;
         LLI2 = rI & (LLI > 0);
         L(LLI2) = labelIndex; % randomly remove some pixels if too many training areas!
@@ -84,9 +85,17 @@ for imIndex = 1:nImages
     labelList{imIndex} = L;
 end
 
+%% count number of pixels for each training class
+f.counts=sum(nPixels, 2);
+f.countsTable=table(env.class_names', nPixels, 'VariableNames', {'Class','TrainingPx'});
+fprintf('Table of training pixel counts:\n')
+fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
+disp(f.countsTable)
+if 1==0 % for testing
+    histogram('Categories', env.class_names, 'BinCounts', f.counts)
+end
+
 %% construct train matrix
-
-
 tic
 nBands=size(imageList{1}, 3);
 lb_all=[];
@@ -127,6 +136,43 @@ fprintf('time spent computing features: %f s\n', toc);
 
 if isempty(lb_all)
     error('Something''s wrong.  lb_all is empty.')
+end
+
+%% limit number of pixels for each training class
+    % done after computing features and extracting labelled pixels
+
+if env.equalizeTrainClassSizes
+    f.limit=median(f.counts); % sloppy best guess for class size limit
+    msk=ones(size(lb_all));
+    for class=1:nLabels % loop over bands w/i image
+        if f.counts(class) > f.limit
+            msk=lb_all==class;
+            f.c = cvpartition(msk,'Holdout',f.limit/f.counts(class)); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
+            lb_all(~f.c.test & msk)=0; % set extra px equal to zero for large classe
+            % SCRAP
+            
+%             lbl_msk=lb_all(lb_all==band);
+%             lbl_msk(randsample())=NaN;
+%             lbl_all(
+%            lb_all(lb_all==band)=randsample( 
+% f.limit/f.counts(class) % f.counts(class)/length(lb_all)
+        end
+    end
+end
+
+    % remove these pixels that were cut
+lb_all=lb_all(lb_all>0);
+ft_all=ft_all(lb_all>0,:);
+
+%%
+    % Re-display equilization data
+f.counts_afterEq=histcounts(lb_all, 0.5:nLabels+0.5);
+f.countsTable_after=table(env.class_names', f.counts_afterEq', 'VariableNames', {'Class','TrainingPxNew'});
+fprintf('Modified table of training pixel counts:\n')
+fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
+disp(f.countsTable)
+if 1==0 % for testing
+    histogram('Categories', env.class_names, 'BinCounts', f.counts_afterEq)
 end
 %% concat training matrices (one for each band)
     % save original total features and labels before partitioning
