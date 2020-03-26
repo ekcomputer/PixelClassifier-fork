@@ -87,7 +87,7 @@ end
 
 %% count number of pixels for each training class
 f.counts=sum(nPixels, 2);
-f.countsTable=table(env.class_names', nPixels, 'VariableNames', {'Class','TrainingPx'});
+f.countsTable=table(env.class_names', f.counts, 'VariableNames', {'Class','TrainingPx'});
 fprintf('Table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
 disp(f.countsTable)
@@ -147,6 +147,7 @@ if env.equalizeTrainClassSizes
     for class=1:nLabels % loop over bands w/i image
         if f.counts(class) > f.limit
             msk=lb_all==class;
+            rng(env.seed);
             f.c = cvpartition(msk,'Holdout',f.limit/f.counts(class)); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
             lb_all(~f.c.test & msk)=0; % set extra px equal to zero for large classe
             % SCRAP
@@ -170,15 +171,17 @@ f.counts_afterEq=histcounts(lb_all, 0.5:nLabels+0.5);
 f.countsTable_after=table(env.class_names', f.counts_afterEq', 'VariableNames', {'Class','TrainingPxNew'});
 fprintf('Modified table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
-disp(f.countsTable)
+disp(f.countsTable_after)
 if 1==0 % for testing
     histogram('Categories', env.class_names, 'BinCounts', f.counts_afterEq)
 end
+
 %% concat training matrices (one for each band)
     % save original total features and labels before partitioning
 % ft_all=[training.ft];
 % lb=[training.lb];
 % lb_all=lb; clear lb; 
+
 %% split into training and val datasets; turn labels into categories
     % lb and ft are training partitions, lb_val and ft_val are validation
     % partitions, lb_all and ft_all include both
@@ -250,7 +253,7 @@ try % unnecc, now that I introduced try catch for confusionchart
     model.validation=v;
 end
 save(modelPath,'model');
-
+fprintf('Saved model to:\t%s\n', modelPath);
 disp('done training')
 
 %% classify, without having to click again
