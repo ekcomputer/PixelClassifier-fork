@@ -53,8 +53,9 @@ modelPath = env.output.current_model;
 use_raw_image=env.pixelClassifier.use_raw_image;
 textureWindows=env.pixelClassifier.textureWindows;
 speckleFilter=env.pixelClassifier.speckleFilter;
-
-% 
+try % backwards compatibility
+    trainingPath=env.output.current_training;
+end
 % no parameters to set beyond this point
 %
 %% read images/labels
@@ -86,8 +87,8 @@ for imIndex = 1:nImages
 end
 
 %% count number of pixels for each training class
-f.counts=sum(nPixels, 2);
-f.countsTable=table(env.class_names', f.counts, 'VariableNames', {'Class','TrainingPx'});
+f.counts=histcounts(lb_all, 0.5:nLabels+0.5);
+f.countsTable=table(env.class_names', f.counts', 'VariableNames', {'Class','TrainingPx'});
 fprintf('Table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
 disp(f.countsTable)
@@ -138,32 +139,35 @@ if isempty(lb_all)
     error('Something''s wrong.  lb_all is empty.')
 end
 
-%% limit number of pixels for each training class
+%% limit number of pixels for each training class (culling)
     % done after computing features and extracting labelled pixels
 
-if env.equalizeTrainClassSizes
+if env.equalizeTrainClassSizes % culling
+    fprintf('\nTraining set size equalization/culling.\n')
     f.limit=median(f.counts); % sloppy best guess for class size limit
-    msk=ones(size(lb_all));
+%     msk=ones(size(lb_all));
     for class=1:nLabels % loop over bands w/i image
         if f.counts(class) > f.limit
-            msk=lb_all==class;
+            msk=lb_all==class; % positive mask for each class, overwrites
+            f.ratio=f.limit/f.counts(class); 
+            fprintf('\tClass:  %s.\tFraction to keep:  %0.2f\n',env.class_names{class}, f.ratio)
             rng(env.seed);
-            f.c = cvpartition(msk,'Holdout',f.limit/f.counts(class)); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
-            lb_all(~f.c.test & msk)=0; % set extra px equal to zero for large classe
+            f.c = cvpartition(msk,'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
+            lb_all(f.c.training & msk)=0; % set extra px equal to zero for large classe
             % SCRAP
             
 %             lbl_msk=lb_all(lb_all==band);
 %             lbl_msk(randsample())=NaN;
 %             lbl_all(
 %            lb_all(lb_all==band)=randsample( 
-% f.limit/f.counts(class) % f.counts(class)/length(lb_all)
+% f.limit/f.counts(class) % f.counts(class)/length(lb_all) % -> proportion to keep
         end
     end
+    
+        % remove these pixels that were cut
+    lb_all=lb_all(lb_all>0);
+    ft_all=ft_all(lb_all>0,:);
 end
-
-    % remove these pixels that were cut
-lb_all=lb_all(lb_all>0);
-ft_all=ft_all(lb_all>0,:);
 
 %%
     % Re-display equilization data
@@ -195,9 +199,19 @@ ft=ft_all(c.training(1),:);
 lb=lb_all_cell(c.training(1));
 ft_subset_validation=ft_all(c.test(1),:);
 lb_subset_validation=lb_all_cell(c.test(1));
+
+%% print band stats for each training class (using all data, not just training split)
+% lb=lb_all_cell(c.training(1));
+% f.trainTable=array2table([lb, ft]);
+% grpstats()
+
+fprintf('Checking that training classes have valid data:\n')
+for class=1:nLabels
+    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, 100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class))
+end
 %% training
 
-fprintf('training...'); tic
+fprintf('training...\n'); tic
 % rng('shuffle')
 [treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize, env.seed);
 figureQSS
@@ -228,7 +242,7 @@ try
     for p=1:length(lb_val_test)
         lb_val_test_cell{p}=sprintf('%02d-%s',lb_val_test(p), env.class_names{lb_val_test(p)});
     end
-    [v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_cell, env.class_names); %% <======= HERE 1/9
+    [v.C, v.cm, v.order, v.k, v.OA]=confusionmatStats(lb_subset_validation,lb_val_test_cell, env.class_names);
 catch
     warning('Confusion matrix stats failed at some point.')
 end
@@ -254,6 +268,10 @@ try % unnecc, now that I introduced try catch for confusionchart
 end
 save(modelPath,'model');
 fprintf('Saved model to:\t%s\n', modelPath);
+try % backwards compatibility
+    save(trainingPath, 'ft_all', 'lb_all');
+    fprintf('Saved training data to:\t%s\n', trainingPath);
+end
 disp('done training')
 
 %% classify, without having to click again
