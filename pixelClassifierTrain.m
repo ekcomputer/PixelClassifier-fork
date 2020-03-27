@@ -152,7 +152,7 @@ if env.equalizeTrainClassSizes % culling
             f.ratio=f.limit/f.counts(class); 
             fprintf('\tClass:  %s.\tFraction to keep:  %0.2f\n',env.class_names{class}, f.ratio)
             rng(env.seed);
-            f.c = cvpartition(msk,'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
+            f.c = cvpartition(int8(msk),'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
             lb_all(f.c.training & msk)=0; % set extra px equal to zero for large classe
             lb_all(f.c.test & msk)=class; % make sure classes don't change????
             % SCRAP
