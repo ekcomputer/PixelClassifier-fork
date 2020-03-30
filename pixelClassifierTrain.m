@@ -154,28 +154,12 @@ if env.equalizeTrainClassSizes % culling
             rng(env.seed);
             f.c = cvpartition(int8(msk),'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
             lb_all(f.c.training & msk)=[]; % set extra px equal to zero for large classe
-%             lb_all(f.c.test & msk)=class; % make sure classes don't change???? %% uncomment for check...why???? % If I don't have this line, it culls more, but leaves small classes untouched (which I want)...why???
             ft_all(f.c.training & msk, :)=[]; % new 3/30/2020
             
-                % check that new features from a class where part of
-                % original class....
-%             ft_all(~f.c.training | ~msk, :)=[];
-            all(ismember(ft_all(lb_all==class,:), ft_all_sv(lb_all_sv==class,:)))
-                
-                
-                % SCRAP
-            
-%             lbl_msk=lb_all(lb_all==band);
-%             lbl_msk(randsample())=NaN;
-%             lbl_all(
-%            lb_all(lb_all==band)=randsample( 
-% f.limit/f.counts(class) % f.counts(class)/length(lb_all) % -> proportion to keep
+                % uncomment to check that new features from a class were part of original class....
+%             all(ismember(ft_all(lb_all==class,:), ft_all_sv(lb_all_sv==class,:)))
         end
     end
-    
-        % remove these pixels that were cut
-%     lb_all=lb_all(lb_all>0);
-%     ft_all=ft_all(lb_all>0,:);
 end
 
 %%
