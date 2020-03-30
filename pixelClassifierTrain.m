@@ -148,14 +148,22 @@ if env.equalizeTrainClassSizes % culling
 %     msk=ones(size(lb_all));
     for class=1:nLabels % loop over bands w/i image
         if f.counts(class) > f.limit
-            msk=lb_all==class; % positive mask for each class, overwrites
+            msk=lb_all==class; % positive mask for each class, overwrites, can change dims as lb_all shrinks
             f.ratio=f.limit/f.counts(class); 
             fprintf('\tClass:  %s.\tFraction to keep:  %0.2f\n',env.class_names{class}, f.ratio)
             rng(env.seed);
             f.c = cvpartition(int8(msk),'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
-            lb_all(f.c.training & msk)=0; % set extra px equal to zero for large classe
-            lb_all(f.c.test & msk)=class; % make sure classes don't change????
-            % SCRAP
+            lb_all(f.c.training & msk)=[]; % set extra px equal to zero for large classe
+%             lb_all(f.c.test & msk)=class; % make sure classes don't change???? %% uncomment for check...why???? % If I don't have this line, it culls more, but leaves small classes untouched (which I want)...why???
+            ft_all(f.c.training & msk, :)=[]; % new 3/30/2020
+            
+                % check that new features from a class where part of
+                % original class....
+%             ft_all(~f.c.training | ~msk, :)=[];
+            all(ismember(ft_all(lb_all==class,:), ft_all_sv(lb_all_sv==class,:)))
+                
+                
+                % SCRAP
             
 %             lbl_msk=lb_all(lb_all==band);
 %             lbl_msk(randsample())=NaN;
@@ -166,14 +174,14 @@ if env.equalizeTrainClassSizes % culling
     end
     
         % remove these pixels that were cut
-    lb_all=lb_all(lb_all>0);
-    ft_all=ft_all(lb_all>0,:);
+%     lb_all=lb_all(lb_all>0);
+%     ft_all=ft_all(lb_all>0,:);
 end
 
 %%
     % Re-display equilization data
 f.counts_afterEq=histcounts(lb_all, 0.5:nLabels+0.5);
-f.countsTable_after=table(env.class_names', f.counts_afterEq', 'VariableNames', {'Class','TrainingPxNew'});
+f.countsTable_after=table(env.class_names', f.counts, f.counts_afterEq', 'VariableNames', {'Class','TrainingPxOld', 'TrainingPxNew'});
 fprintf('Modified table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
 disp(f.countsTable_after)
