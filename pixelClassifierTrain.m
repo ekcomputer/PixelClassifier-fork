@@ -87,8 +87,8 @@ for imIndex = 1:nImages
 end
 
 %% count number of pixels for each training class
-f.counts=histcounts(lb_all, 0.5:nLabels+0.5);
-f.countsTable=table(env.class_names', f.counts', 'VariableNames', {'Class','TrainingPx'});
+f.counts=sum(nPixels, 2);
+f.countsTable=table(env.class_names', f.counts, 'VariableNames', {'Class','TrainingPx'});
 fprintf('Table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
 disp(f.countsTable)
