@@ -200,7 +200,11 @@ lb_subset_validation=lb_all_cell(c.test(1));
 
 fprintf('Checking that training classes have valid data:\n')
 for class=1:nLabels
-    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, 100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class))
+    f.percentValidTmp=100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class);
+    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, f.percentValidTmp)
+    if f.percentValidTmp < 99
+       warning('Some invalid pixels are present in the training data.') 
+    end
 end
 %% training
 
