@@ -113,10 +113,15 @@ for imIndex = 1:nImages % loop over images
         training(band).ft = [];
         fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         if band~=nBands && (strcmp(env.inputType, 'Freeman-inc') || strcmp(env.inputType, 'C3-inc') || strcmp(env.inputType, 'Norm-Fr-C11-inc') )
-            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter, names{imIndex}, maprefs{imIndex}, mapinfos{imIndex});
+            [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),...
+                sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas,...
+                use_raw_image, textureWindows, speckleFilter,...
+                names{imIndex}, maprefs{imIndex}, mapinfos{imIndex}, env.constants.noDataValue);
         else % last band is range band- only use raw image
                 % here, F gets rewritten for each band
-            [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),[],[],[],[],[],[],[], 1, [], []);
+            [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),...
+                [],[],[],[],[],[],[], 1,...
+                [], [], NaN, NaN, NaN, env.constants.noDataValue);
             featNames(end+1)=featNames_last_band;
         end
 %         if band==1 && strcmp(env.inputType, 'Freeman-inc') % only compute labels for first band of image

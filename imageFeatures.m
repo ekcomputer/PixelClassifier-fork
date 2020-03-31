@@ -3,9 +3,13 @@ if ~isempty(varargin)
     name=varargin{1}; % names of input files (used for translation filter)
     R=varargin{2}; % map ref object
     mapinfo=varargin{3}; % map info, incl projection
+    nodataValue=varargin{4}; % value to mask out at end
 else
     name='NaN'; % hidden error
+    nodataValue=-10000;
 end
+msk=isnan(I); % negative mask
+I(msk)=0;
 F = [];
 featIndex = 0;
 featNames = {};
@@ -90,4 +94,8 @@ if ~isempty(speckleFilter)
     featNames{featIndex} = 'speckleFilter';
     F = cat(3,F,imguidedfilter(I));
 end
+
+%% add back in NaNs
+F(repmat(msk,[1,1,size(F,3)]))=NaN;
+
 end
