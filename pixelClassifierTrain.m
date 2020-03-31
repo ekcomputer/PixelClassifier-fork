@@ -65,10 +65,10 @@ nLabels = length(labels);
 nImages = length(imageList);
 
 %% remove image no data masks
-for imageIndex=1:nImages
-    sImage=size(imageList{imageIndex}, 3);
-    imageList{imageIndex}(repmat(isnan(imageList{imageIndex}(:,:,sImage)), [1, 1, sImage]))=env.constants.noDataValue;
-end
+% for imageIndex=1:nImages
+%     sImage=size(imageList{imageIndex}, 3);
+%     imageList{imageIndex}(repmat(isnan(imageList{imageIndex}(:,:,sImage)), [1, 1, sImage]))=env.constants.noDataValue;
+% end
 %% training samples cap
 
 maxNPixelsPerLabel = (pctMaxNPixelsPerLabel/100)*size(imageList{1},1)*size(imageList{1},2);

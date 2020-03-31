@@ -45,7 +45,7 @@ if ~isempty(offsets)
             T = imtranslate(J,v,'OutputView','same');
             F = cat(3,F,T);
             featIndex = featIndex+1;
-            featNames{featIndex} = sprintf('offset%da%d',r,aIndex);
+            featNames{featIndex} = sprintf('offset%din%1.1f',r,heading(aIndex));
         end
     end
 end
