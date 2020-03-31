@@ -139,6 +139,25 @@ if isempty(lb_all)
     error('Something''s wrong.  lb_all is empty.')
 end
 
+%% print band stats for each training class (using all data, not just training split)
+% lb=lb_all_cell(c.training(1));
+% f.trainTable=array2table([lb, ft]);
+% grpstats()
+
+fprintf('Checking that training classes have valid data:\n')
+for class=1:nLabels
+    f.percentValidTmp=100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class);
+    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, f.percentValidTmp)
+    if f.percentValidTmp < 100
+       warning('Some invalid pixels are present in the training data.  Removing them.')   
+    end
+end
+
+    % Remove invalid lb and ft if they fall on NoData values
+f.invalid=any(ft_all==env.constants.noDataValue | isnan(ft_all), 2);
+ft_all(f.invalid,:)=[];
+lb_all(f.invalid)=[];
+
 %% limit number of pixels for each training class (culling)
     % done after computing features and extracting labelled pixels
 
@@ -193,19 +212,6 @@ lb=lb_all_cell(c.training(1));
 ft_subset_validation=ft_all(c.test(1),:);
 lb_subset_validation=lb_all_cell(c.test(1));
 
-%% print band stats for each training class (using all data, not just training split)
-% lb=lb_all_cell(c.training(1));
-% f.trainTable=array2table([lb, ft]);
-% grpstats()
-
-fprintf('Checking that training classes have valid data:\n')
-for class=1:nLabels
-    f.percentValidTmp=100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class);
-    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, f.percentValidTmp)
-    if f.percentValidTmp < 99
-       warning('Some invalid pixels are present in the training data.') 
-    end
-end
 %% training
 
 fprintf('training...\n'); tic
