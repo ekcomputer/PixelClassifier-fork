@@ -87,8 +87,8 @@ for imIndex = 1:nImages
 end
 
 %% count number of pixels for each training class
-f.counts=histcounts(lb_all, 0.5:nLabels+0.5);
-f.countsTable=table(env.class_names', f.counts', 'VariableNames', {'Class','TrainingPx'});
+f.counts=sum(nPixels, 2);
+f.countsTable=table(env.class_names', f.counts, 'VariableNames', {'Class','TrainingPx'});
 fprintf('Table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
 disp(f.countsTable)
@@ -139,6 +139,25 @@ if isempty(lb_all)
     error('Something''s wrong.  lb_all is empty.')
 end
 
+%% print band stats for each training class (using all data, not just training split)
+% lb=lb_all_cell(c.training(1));
+% f.trainTable=array2table([lb, ft]);
+% grpstats()
+
+fprintf('Checking that training classes have valid data:\n')
+for class=1:nLabels
+    f.percentValidTmp=100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class);
+    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, f.percentValidTmp)
+    if f.percentValidTmp < 100
+       warning('Some invalid pixels are present in the training data.  Removing them.')   
+    end
+end
+
+    % Remove invalid lb and ft if they fall on NoData values
+f.invalid=any(ft_all==env.constants.noDataValue | isnan(ft_all), 2);
+ft_all(f.invalid,:)=[];
+lb_all(f.invalid)=[];
+
 %% limit number of pixels for each training class (culling)
     % done after computing features and extracting labelled pixels
 
@@ -148,31 +167,24 @@ if env.equalizeTrainClassSizes % culling
 %     msk=ones(size(lb_all));
     for class=1:nLabels % loop over bands w/i image
         if f.counts(class) > f.limit
-            msk=lb_all==class; % positive mask for each class, overwrites
+            msk=lb_all==class; % positive mask for each class, overwrites, can change dims as lb_all shrinks
             f.ratio=f.limit/f.counts(class); 
             fprintf('\tClass:  %s.\tFraction to keep:  %0.2f\n',env.class_names{class}, f.ratio)
             rng(env.seed);
-            f.c = cvpartition(msk,'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
-            lb_all(f.c.training & msk)=0; % set extra px equal to zero for large classe
-            % SCRAP
+            f.c = cvpartition(int8(msk),'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
+            lb_all(f.c.training & msk)=[]; % set extra px equal to zero for large classe
+            ft_all(f.c.training & msk, :)=[]; % new 3/30/2020
             
-%             lbl_msk=lb_all(lb_all==band);
-%             lbl_msk(randsample())=NaN;
-%             lbl_all(
-%            lb_all(lb_all==band)=randsample( 
-% f.limit/f.counts(class) % f.counts(class)/length(lb_all) % -> proportion to keep
+                % uncomment to check that new features from a class were part of original class....
+%             all(ismember(ft_all(lb_all==class,:), ft_all_sv(lb_all_sv==class,:)))
         end
     end
-    
-        % remove these pixels that were cut
-    lb_all=lb_all(lb_all>0);
-    ft_all=ft_all(lb_all>0,:);
 end
 
 %%
     % Re-display equilization data
 f.counts_afterEq=histcounts(lb_all, 0.5:nLabels+0.5);
-f.countsTable_after=table(env.class_names', f.counts_afterEq', 'VariableNames', {'Class','TrainingPxNew'});
+f.countsTable_after=table(env.class_names', f.counts, f.counts_afterEq', 'VariableNames', {'Class','TrainingPxOld', 'TrainingPxNew'});
 fprintf('Modified table of training pixel counts:\n')
 fprintf('( Equalize training class sizes is set to:\t%d )\n\n', env.equalizeTrainClassSizes)
 disp(f.countsTable_after)
@@ -200,15 +212,6 @@ lb=lb_all_cell(c.training(1));
 ft_subset_validation=ft_all(c.test(1),:);
 lb_subset_validation=lb_all_cell(c.test(1));
 
-%% print band stats for each training class (using all data, not just training split)
-% lb=lb_all_cell(c.training(1));
-% f.trainTable=array2table([lb, ft]);
-% grpstats()
-
-fprintf('Checking that training classes have valid data:\n')
-for class=1:nLabels
-    fprintf('\tClass: %s.\tPercent of feature 1 > 0:  %0.2f%%\n',env.class_names{class}, 100*sum(ft_all(:,1)>0 & lb_all == class)/sum(lb_all == class))
-end
 %% training
 
 fprintf('training...\n'); tic
