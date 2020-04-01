@@ -4,13 +4,24 @@ global env
 %% reshape rfFeat from no.entries x no. features to linear
 [nr,nc,nVariables] = size(rfFeat);
 rfFeat = reshape(rfFeat,[nr*nc,nVariables]);
-
+nClasses=length(treeBag.ClassNames);
 %% branch for parallel
-if nSubsets == 1
-    % ----- single thread
-    
-    [~,scores] = single(predict(treeBag,rfFeat));
-    [~,indOfMax] = uint8(max(scores,[],2));
+if nSubsets == 1   
+        % pre-allocate answer
+        scores=zeros([size(rfFeat, 1), length(treeBag.ClassNames)], 'like', rfFeat);
+        indOfMax=uint8(env.constants.noDataValue_ouput)*ones([size(rfFeat, 1),1], 'uint8'); % same as zeros
+        
+            % generate mask
+        msk=all(isnan(rfFeat),2); % negative mask
+        
+            % predict only on valid data
+        [~,scores_valid] = predict(treeBag,rfFeat(~msk,:));
+        [~,indOfMax_valid] = max(scores_valid,[],2);
+        
+            % add in classified valid data to pre-allocated zeros, using mask
+            
+        scores(~msk,:)=scores_valid;  
+        indOfMax(~msk)=indOfMax_valid;
 else
     % ----- parallel
     
@@ -28,7 +39,7 @@ else
     %% start parallel pool
     try
         if isunix && isempty(gcp('nocreate')) % if on ASC and no pool running
-            nCores=str2num(getenv('SLURM_JOB_CPUS_PER_NODE')); % query number of tasks from slurm
+            nCores=str2double(getenv('SLURM_JOB_CPUS_PER_NODE')); % query number of tasks from slurm
             if isempty(nCores) % not in slurm environment
                 nCores=8;
             end
@@ -44,12 +55,29 @@ else
     
     %% classify in a parallel loop
     parfor i = 1:nSubsets
-        [~,scores] = predict(treeBag,ftsubsets{i});
-        [~,indOfMax] = max(scores,[],2);
-        scsubsets{i} = single(scores);
-        imsubsets{i} = uint8(indOfMax);
+        
+            % pre-allocate answer
+        scores=zeros([size(ftsubsets{i}, 1), nClasses], 'like', ftsubsets{i});
+        indOfMax=uint8(env.constants.noDataValue_ouput)*ones([size(ftsubsets{i}, 1),1], 'uint8'); % same as zeros
+        
+            % generate mask
+        msk=all(isnan(ftsubsets{i}),2); % negative mask
+        
+            % predict only on valid data
+        [~,scores_valid] = predict(treeBag,ftsubsets{i}(~msk,:));
+        [~,indOfMax_valid] = max(scores_valid,[],2);
+        
+            % add in classified valid data to pre-allocated zeros, using mask
+            
+        scores(~msk,:)=scores_valid;  
+        indOfMax(~msk)=indOfMax_valid;
+            
+            % save mem
+        scsubsets{i} = scores; % already single
+        imsubsets{i} = indOfMax; % already uint8
     end
-        % set as single and uint8 to save mem
+    
+    %% pre-allocate and re-use variables; set as single and uint8 to save mem    
     scores = zeros(nVariables,length(treeBag.ClassNames), 'single');
     indOfMax = zeros(nVariables,1, 'uint8');
     
@@ -60,8 +88,8 @@ else
     end
 end
 
-%% Reshape outputs into image
-imL = uint8(reshape(indOfMax,[nr,nc]));
+%% Reshape outputs into image ( could be slightly faster if vectorized, but only takes 3 sec)
+imL = reshape(indOfMax,[nr,nc]); % already uint8
 classProbs = zeros(nr,nc,size(scores,2), 'single');
 for i = 1:size(scores,2)
     classProbs(:,:,i) = reshape(scores(:,i),[nr,nc]);

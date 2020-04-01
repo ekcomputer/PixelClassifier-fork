@@ -60,8 +60,8 @@ for imIndex = 1:length(imagePaths)
     mapinfo=geotiffinfo(imagePaths{imIndex});
     nBands=size(I, 3);
         % remove NaN's
-    I(repmat(isnan(I(:,:,nBands)),...
-        [1, 1, nBands]))=env.constants.noDataValue;
+%     I(repmat(isnan(I(:,:,nBands)),...
+%         [1, 1, nBands]))=env.constants.noDataValue;
     tic;
     F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
