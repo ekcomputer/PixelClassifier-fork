@@ -59,12 +59,14 @@ end
 % no parameters to set beyond this point
 %
 %% read images/labels
-
+fprintf('Reading inputs...\n')
 [imageList,labelList,labels, names, maprefs, mapinfos] = parseLabelFolder(trainPath);
 nLabels = length(labels);
 nImages = length(imageList);
 
 %% remove image no data masks
+% % careful: code under heading '%% mask out near range, if applicable'
+% adds NaNs back in...
 % for imageIndex=1:nImages
 %     sImage=size(imageList{imageIndex}, 3);
 %     imageList{imageIndex}(repmat(isnan(imageList{imageIndex}(:,:,sImage)), [1, 1, sImage]))=env.constants.noDataValue;
@@ -105,25 +107,41 @@ for imIndex = 1:nImages % loop over images
     L = labelList{imIndex}; labelList{imIndex}=[]; % save mem
     ft_band=[];
 %     training(band).lb = [];
-    for band=1:nBands % loop over bands w/i image
+
+    %% mask out near range, if applicable
+    if ismember(env.inputType, {'Freeman', 'C3', 'T3'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+        if size(imageList{imIndex}, 3) <4 % no inc band was included
+            error('No inc. band found?')
+        else % inc band was included
+            fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
+            msk=imageList{imIndex}(:,:,4) < env.IncMaskMin; % negative mask for near range
+            imageList{imIndex}(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
+        end
+    end
+    %% loop over bands w/i image
+    for band=1:nBands 
         if nBands~=size(imageList{imIndex}, 3)
             txt=sprintf('EK: Number of bands in image %d is %d, while it is %d in image 1.', band,size(imageList{imIndex}, 3), size(imageList{1}, 3));
             error(txt);
         end
         training(band).ft = [];
-        fprintf('computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        if band~=nBands && (strcmp(env.inputType, 'Freeman-inc') || strcmp(env.inputType, 'C3-inc') || strcmp(env.inputType, 'Norm-Fr-C11-inc') )
+        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3'})
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),...
                 sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas,...
                 use_raw_image, textureWindows, speckleFilter,...
                 names{imIndex}, maprefs{imIndex}, mapinfos{imIndex});
-        else % last band is range band- only use raw image
-                % here, F gets rewritten for each band
+        elseif band == nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc'}) % for incidence angle band
             [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),...
                 [],[],[],[],[],[],[], 1,...
                 [], []);
             featNames(end+1)=featNames_last_band;
+        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3'})
+            nBandsFinal=nBands-1; % for plotting purposes
+            break % Don't extract any features from inc. band.  
+        else
+            error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
         end
+        fprintf('computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
 %         if band==1 && strcmp(env.inputType, 'Freeman-inc') % only compute labels for first band of image
 %             [rfFeat,lb] = rfFeatAndLab(F,L);            
 %         else
@@ -232,7 +250,7 @@ elseif strcmp(env.inputType, 'C3-inc')
     featImp=[featImp, zeros(1, length(featNames)-2)]; %%HERE TODO
 else
 end
-featImpRshp=reshape(featImp, [length(featImp)/nBands, nBands ]); %% <----HERE
+featImpRshp=reshape(featImp, [length(featImp)/nBandsFinal, nBandsFinal ]); %% <----HERE
 barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
 legend_txt=env.plot.bandLabels;
 % legend_txt=cellstr(num2str([1:nBands]'));

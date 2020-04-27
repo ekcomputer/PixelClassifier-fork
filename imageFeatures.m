@@ -1,4 +1,6 @@
 function [F,featNames] = imageFeatures(I,sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas, use_raw_image, textureWindows, speckleFilter, varargin)
+
+%% inputs
 if ~isempty(varargin)
     name=varargin{1}; % names of input files (used for translation filter)
     R=varargin{2}; % map ref object
@@ -6,6 +8,8 @@ if ~isempty(varargin)
 else
     name='NaN'; % hidden error
 end
+
+%% create and apply data mask
 msk=isnan(I); % negative mask
 I(msk)=0;
 F = [];

@@ -60,20 +60,40 @@ for imIndex = 1:length(imagePaths)
     mapinfo=geotiffinfo(imagePaths{imIndex});
     nBands=size(I, 3);
         % remove NaN's
+% % Note section under heading 'mask out near range, if applicable' adds
+% NaNs back in...
 %     I(repmat(isnan(I(:,:,nBands)),...
 %         [1, 1, nBands]))=env.constants.noDataValue;
     tic;
+    
+    %% mask out near range, if applicable
+    if ismember(env.inputType, {'Freeman', 'C3', 'T3'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+        if size(I, 3) <4 % no inc band was included
+            error('No inc. band found?')
+        else % inc band was included
+            fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
+            msk=I(:,:,4) < env.IncMaskMin; % negative mask for near range
+            I(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
+        end
+    end
+    %% loop over bands w/i image
+    
     F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
-        fprintf('Computing features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        if band~=nBands && (strcmp(env.inputType, 'Freeman-inc') || strcmp(env.inputType, 'C3-inc') || strcmp(env.inputType, 'Norm-Fr-C11-inc') )
+        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3'})
             F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
                 model.offsets,model.osSigma,model.radii,model.cfSigma,...
                 model.logSigmas,model.sfSigmas, model.use_raw_image,...
                 model.textureWindows, model.speckleFilter,...
                 names{imIndex}, R, mapinfo));
-        else % for incidence angle band
+            fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+        elseif band == nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc'}) % for incidence angle band
             F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], []));
+            fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3'})
+            % Don't extract any features from inc. band.
+        else 
+            error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
         end
 %         F=cat(3,F,F0); clear F0;
     end
