@@ -1,5 +1,5 @@
 function [rfFeat] = rfFeat(imFeat,imLbl)
-
+% extracts just features as vector from set of image/labe-image pairs
 nVariables = size(imFeat,3);
 
 nLabels = max(max(imLbl)); % assuming labels are 1, 2, 3, ...

@@ -103,12 +103,13 @@ tic
 nBands=size(imageList{1}, 3);
 lb_all=[];
 ft_all=[]; %double.empty(0,nBands); % initilize
+info_all=zeros(0,0, 'uint16'); % init
 for imIndex = 1:nImages % loop over images 
     L = labelList{imIndex}; labelList{imIndex}=[]; % save mem
     ft_band=[];
 %     training(band).lb = [];
 
-    %% mask out near range, if applicable
+    % mask out near range, if applicable
     if ismember(env.inputType, {'Freeman', 'C3', 'T3'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
         if size(imageList{imIndex}, 3) <4 % no inc band was included
             error('No inc. band found?')
@@ -118,7 +119,7 @@ for imIndex = 1:nImages % loop over images
             imageList{imIndex}(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
         end
     end
-    %% loop over bands w/i image
+    % loop over bands w/i image
     for band=1:nBands 
         if nBands~=size(imageList{imIndex}, 3)
             txt=sprintf('EK: Number of bands in image %d is %d, while it is %d in image 1.', band,size(imageList{imIndex}, 3), size(imageList{1}, 3));
@@ -147,13 +148,16 @@ for imIndex = 1:nImages % loop over images
 %         else
 %             rfFeat = rfFeatAndLab(F, L);
 %         end
-        [rfFeat,lb_band] = rfFeatAndLab(F,L);
+        [rfFeat,lb_band, rfInfo] = rfFeatAndLab(F,L, imIndex); % rfFeat and lb_band only needed on last iter.
         ft_band = [ft_band, rfFeat]; % can just say training(band).ft = rfFeat; ...
     end
 %     lb_all = [lb_all; rfLbl];
     lb_all=[lb_all; lb_band];
     ft_all=[ft_all; ft_band];
-    imageList{imIndex}=[]; % clear to save memory
+    info_all=[info_all; rfInfo];
+    if ~isunix
+        imageList{imIndex}=[]; % clear to save memory 
+    end
 end
 % clear F % save memory
 fprintf('time spent computing features: %f s\n', toc);
@@ -180,6 +184,7 @@ end
 f.invalid=any(ft_all==env.constants.noDataValue | isnan(ft_all), 2);
 ft_all(f.invalid,:)=[];
 lb_all(f.invalid)=[];
+info_all(f.invalid)=[];
 
 %% limit number of pixels for each training class (culling)
     % done after computing features and extracting labelled pixels
@@ -196,6 +201,7 @@ if env.equalizeTrainClassSizes % culling
             rng(env.seed);
             f.c = cvpartition(int8(msk),'Holdout',f.ratio); % overwrites each time % f.c.testsize is far larger than f.limit, but it includes entries that weren't orig.==band
             lb_all(f.c.training & msk)=[]; % set extra px equal to zero for large classe
+            info_all(f.c.training & msk, :)=[]; % set extra px equal to zero for large classe
             ft_all(f.c.training & msk, :)=[]; % new 3/30/2020
             
                 % uncomment to check that new features from a class were part of original class....
@@ -232,8 +238,10 @@ for p=1:length(lb_all)
 end
 ft=ft_all(c.training(1),:);
 lb=lb_all_cell(c.training(1));
+
 ft_subset_validation=ft_all(c.test(1),:);
 lb_subset_validation=lb_all_cell(c.test(1));
+info_subset_validation=info_all(c.test(1));
 
 %% training
 
@@ -242,7 +250,7 @@ fprintf('training...\n'); tic
 [treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize, env.seed);
 figureQSS
 subplot(1,2,1), 
-if strcmp(env.inputType, 'Freeman-inc')
+if strcmp(env.inputType, 'Freeman-inc') % ismember(env.inputType, {'Freeman', 'C3', 'T3'})
 %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
     featImp=[featImp, zeros(1, length(featNames)-2)]; 
 elseif strcmp(env.inputType, 'C3-inc')
@@ -295,8 +303,10 @@ end
 save(modelPath,'model');
 fprintf('Saved model to:\t%s\n', modelPath);
 try % backwards compatibility
-    save(trainingPath, 'ft_all', 'lb_all');
-    fprintf('Saved training data to:\t%s\n', trainingPath);
+    save(trainingPath, 'ft_all', 'lb_all','info_all', 'lb_subset_validation', 'lb_val_test_cell', 'info_subset_validation');  
+    fprintf('Saved training and ancilliary data to:\t%s\n', trainingPath);
+catch
+    warning('problem saving ancilliary data')
 end
 disp('done training')
 
