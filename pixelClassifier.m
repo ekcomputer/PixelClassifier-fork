@@ -67,7 +67,7 @@ for imIndex = 1:length(imagePaths)
     tic;
     
     %% mask out near range, if applicable
-    if ismember(env.inputType, {'Freeman', 'C3', 'T3'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+    if ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
         if size(I, 3) <4 % no inc band was included
             error('No inc. band found?')
         else % inc band was included
@@ -80,7 +80,7 @@ for imIndex = 1:length(imagePaths)
     
     F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
-        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3'})
+        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3', 'Sinclair'})
             F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
                 model.offsets,model.osSigma,model.radii,model.cfSigma,...
                 model.logSigmas,model.sfSigmas, model.use_raw_image,...
@@ -90,7 +90,7 @@ for imIndex = 1:length(imagePaths)
         elseif band == nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc'}) % for incidence angle band
             F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], []));
             fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3'})
+        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
             % Don't extract any features from inc. band.
         else 
             error('Unknown band configuration in input file(s) or wrong env.inputType selected.')

@@ -101,6 +101,7 @@ end
 %% construct train matrix
 tic
 nBands=size(imageList{1}, 3);
+nBandsFinal=nBands; % for plotting
 lb_all=[];
 ft_all=[]; %double.empty(0,nBands); % initilize
 info_all=zeros(0,0, 'uint16'); % init
@@ -110,7 +111,7 @@ for imIndex = 1:nImages % loop over images
 %     training(band).lb = [];
 
     % mask out near range, if applicable
-    if ismember(env.inputType, {'Freeman', 'C3', 'T3'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+    if ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
         if size(imageList{imIndex}, 3) <4 % no inc band was included
             error('No inc. band found?')
         else % inc band was included
@@ -126,7 +127,7 @@ for imIndex = 1:nImages % loop over images
             error(txt);
         end
         training(band).ft = [];
-        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3'})
+        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3', 'Sinclair'})
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),...
                 sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas,...
                 use_raw_image, textureWindows, speckleFilter,...
@@ -136,14 +137,14 @@ for imIndex = 1:nImages % loop over images
                 [],[],[],[],[],[],[], 1,...
                 [], []);
             featNames(end+1)=featNames_last_band;
-        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3'})
+        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
             nBandsFinal=nBands-1; % for plotting purposes
             break % Don't extract any features from inc. band.  
         else
             error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
         end
         fprintf('computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-%         if band==1 && strcmp(env.inputType, 'Freeman-inc') % only compute labels for first band of image
+%         if band==1 && strcmp(env.inputType, 'Frim_dir_nband-inc') % only compute labels for first band of image
 %             [rfFeat,lb] = rfFeatAndLab(F,L);            
 %         else
 %             rfFeat = rfFeatAndLab(F, L);
@@ -250,19 +251,24 @@ fprintf('training...\n'); tic
 [treeBag,featImp,oobPredError] = rfTrain(ft,lb,nTrees,minLeafSize, env.seed);
 figureQSS
 subplot(1,2,1), 
-if strcmp(env.inputType, 'Freeman-inc') % ismember(env.inputType, {'Freeman', 'C3', 'T3'})
-%     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
-    featImp=[featImp, zeros(1, length(featNames)-2)]; 
-elseif strcmp(env.inputType, 'C3-inc')
-%     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
-    featImp=[featImp, zeros(1, length(featNames)-2)]; %%HERE TODO
-else
+try
+    if strcmp(env.inputType, 'Freeman-inc') % ismember(env.inputType, {'Freeman', 'C3', 'T3'})
+    %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
+        featImp=[featImp, zeros(1, length(featNames)-2)]; 
+    elseif strcmp(env.inputType, 'C3-inc')
+    %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
+        featImp=[featImp, zeros(1, length(featNames)-2)]; %%HERE TODO
+    elseif strcmp(env.inputType, 'Sinclair')
+        % unchanged
+    else
+    end
+    featImpRshp=reshape(featImp, [length(featImp)/nBandsFinal, nBandsFinal ]); %% <----HERE
+    barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
+    legend_txt=env.plot.bandLabels;
+    % legend_txt=cellstr(num2str([1:nBands]'));
+    legend(legend_txt, 'Location', 'best', 'FontSize', 12);
 end
-featImpRshp=reshape(featImp, [length(featImp)/nBandsFinal, nBandsFinal ]); %% <----HERE
-barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
-legend_txt=env.plot.bandLabels;
-% legend_txt=cellstr(num2str([1:nBands]'));
-legend(legend_txt, 'Location', 'best', 'FontSize', 12);
+
 subplot(1,2,2), plot(oobPredError), title('out-of-bag classification error')
 fprintf('training time: %f s\n', toc);
 
