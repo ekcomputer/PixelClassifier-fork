@@ -72,12 +72,12 @@ for imIndex = 1:length(imagePaths)
     tic;
     
     %% mask out near range, if applicable
-    if ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+    if ~isnan(env.inc_band) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
         if size(I, 3) <4 % no inc band was included
             error('No inc. band found?')
         else % inc band was included
             fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
-            msk=I(:,:,4) < env.IncMaskMin; % negative mask for near range
+            msk=I(:,:,env.inc_band) < env.IncMaskMin; % negative mask for near range
             I(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
         end
     end
@@ -85,18 +85,20 @@ for imIndex = 1:length(imagePaths)
     
     F=single.empty(size(I,1),size(I,2),0); % initilize
     for band=1:nBands
-        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3', 'Sinclair'})
+        if ismember(band, env.radar_bands) % for radar bands
             F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
                 model.offsets,model.osSigma,model.radii,model.cfSigma,...
                 model.logSigmas,model.sfSigmas, model.use_raw_image,...
                 model.textureWindows, model.speckleFilter,...
                 names{imIndex}, R, mapinfo));
             fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        elseif band == nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc'}) % for incidence angle band
+        elseif ismember(band, env.inc_band) % for incidence angle band
             F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], []));
             fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
+%         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
             % Don't extract any features from inc. band.
+        elseif ismember(band, env.dem_band) % for dem band
+            error('undefined')    
         else 
             error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
         end

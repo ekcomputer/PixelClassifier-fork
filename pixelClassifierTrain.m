@@ -1,5 +1,6 @@
 clear
 % clc
+global env
 fprintf('\n\n')
 %% set parameters
 Env_PixelClassifier % load environment vars
@@ -113,12 +114,12 @@ for imIndex = 1:nImages % loop over images
 %     training(band).lb = [];
 
     % mask out near range, if applicable
-    if ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'}) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+    if ~isnan(env.inc_band) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
         if size(imageList{imIndex}, 3) <4 % no inc band was included
             error('No inc. band found?')
         else % inc band was included
             fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
-            msk=imageList{imIndex}(:,:,4) < env.IncMaskMin; % negative mask for near range
+            msk=imageList{imIndex}(:,:,env.inc_band) < env.IncMaskMin; % negative mask for near range
             imageList{imIndex}(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
         end
     end
@@ -129,19 +130,20 @@ for imIndex = 1:nImages % loop over images
             error(txt);
         end
         training(band).ft = [];
-        if band~=nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc', 'Freeman', 'C3', 'T3', 'Sinclair'})
+        if ismember(band, env.radar_bands) % for radar bands
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),...
                 sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas,...
                 use_raw_image, textureWindows, speckleFilter,...
                 names{imIndex}, maprefs{imIndex}, mapinfos{imIndex});
-        elseif band == nBands && ismember(env.inputType, {'Freeman-inc','C3-inc', 'Norm-Fr-C11-inc'}) % for incidence angle band
+        elseif ismember(band, env.inc_band) % for incidence angle band
             [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),...
                 [],[],[],[],[],[],[], 1,...
                 [], []);
             featNames(end+1)=featNames_last_band;
-        elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
-            nBandsFinal=nBands-1; % for plotting purposes
-            break % Don't extract any features from inc. band.  
+        elseif ismember(band, env.dem_band) % for dem band
+            error('undefined')    
+%         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
+%             nBandsFinal=nBands-1; % for plotting purposes % Don't extract any features from inc. band.  
         else
             error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
         end
@@ -233,7 +235,6 @@ end
 %% split into training and val datasets; turn labels into categories
     % lb and ft are training partitions, lb_val and ft_val are validation
     % partitions, lb_all and ft_all include both
-global env
 rng(env.seed);
 c = cvpartition(lb_all,'Holdout',env.valPartitionRatio);
 for p=1:length(lb_all)
@@ -254,12 +255,9 @@ fprintf('training...\n'); tic
 figureQSS
 subplot(1,2,1), 
 try
-    if strcmp(env.inputType, 'Freeman-inc') % ismember(env.inputType, {'Freeman', 'C3', 'T3'})
+    if ismember(env.inputType, {'Freeman-inc','C3-inc'}) % ismember(env.inputType, {'Freeman', 'C3', 'T3'})
     %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
         featImp=[featImp, zeros(1, length(featNames)-2)]; 
-    elseif strcmp(env.inputType, 'C3-inc')
-    %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
-        featImp=[featImp, zeros(1, length(featNames)-2)]; %%HERE TODO
     elseif strcmp(env.inputType, 'Sinclair')
         % unchanged
     else
@@ -269,6 +267,8 @@ try
     legend_txt=env.plot.bandLabels;
     % legend_txt=cellstr(num2str([1:nBands]'));
     legend(legend_txt, 'Location', 'best', 'FontSize', 12);
+catch
+    disp('Not able to plot feaure importance for some reason...')
 end
 
 subplot(1,2,2), plot(oobPredError), title('out-of-bag classification error')
