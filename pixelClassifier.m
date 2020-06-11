@@ -59,6 +59,11 @@ for imIndex = 1:length(imagePaths)
     [I,R] = geotiffread(imagePaths{imIndex});
     mapinfo=geotiffinfo(imagePaths{imIndex});
     nBands=size(I, 3);
+    
+        % set NoData values to NaN
+    I(repmat(any(I(:, :, env.radar_bands)<0,3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if any radar band <0   
+    I(repmat(all(I(:, :,env.radar_bands)==env.constants.noDataValue, 3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if each radar band ==0
+
         % remove NaN's
 % % Note section under heading 'mask out near range, if applicable' adds
 % NaNs back in...

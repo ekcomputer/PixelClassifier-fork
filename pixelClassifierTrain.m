@@ -71,11 +71,13 @@ nImages = length(imageList);
 %     sImage=size(imageList{imageIndex}, 3);
 %     imageList{imageIndex}(repmat(isnan(imageList{imageIndex}(:,:,sImage)), [1, 1, sImage]))=env.constants.noDataValue;
 % end
-%% training samples cap
+%% training samples cap and set negative or NoData values to NaN
 
 maxNPixelsPerLabel = (pctMaxNPixelsPerLabel/100)*size(imageList{1},1)*size(imageList{1},2);
 nPixels=zeros(nLabels, nImages); % init
 for imIndex = 1:nImages
+    imageList{imIndex}(repmat(any(imageList{imIndex}(:, :, env.radar_bands)<0,3), [1,1, size(imageList{imIndex},3)]))=NaN; % set pixels to NaN if any radar band <0   
+    imageList{imIndex}(repmat(all(imageList{imIndex}(:, :,env.radar_bands)==env.constants.noDataValue, 3), [1,1, size(imageList{imIndex},3)]))=NaN; % set pixels to NaN if each radar band ==0
     L = labelList{imIndex};
     for labelIndex = 1:nLabels
         LLI = L == labelIndex;
@@ -182,10 +184,10 @@ for class=1:nLabels
 end
 
     % Remove invalid lb and ft if they fall on NoData values
-f.invalid=any(ft_all==env.constants.noDataValue | isnan(ft_all), 2);
+f.invalid=any(isnan(ft_all), 2); % ft_all==env.constants.noDataValue | 
 ft_all(f.invalid,:)=[];
 lb_all(f.invalid)=[];
-info_all(f.invalid)=[];
+info_all(f.invalid,:)=[];
 
 %% limit number of pixels for each training class (culling)
     % done after computing features and extracting labelled pixels
