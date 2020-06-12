@@ -258,9 +258,8 @@ try
     if ismember(env.inputType, {'Freeman-inc','C3-inc'}) % ismember(env.inputType, {'Freeman', 'C3', 'T3'})
     %     featImp=[featImp, zeros(1, length(featNames)*nBands-length(featImp))]; 
         featImp=[featImp, zeros(1, length(featNames)-2)]; 
-    elseif strcmp(env.inputType, 'Sinclair')
+%     elseif strcmp(env.inputType, 'Sinclair', 'SinclairU')
         % unchanged
-    else
     end
     featImpRshp=reshape(featImp, [length(featImp)/nBandsFinal, nBandsFinal ]); %% <----HERE
     barh(featImpRshp), set(gca,'yticklabel',featNames'), set(gca,'YTick',1:length(featNames)), title('feature importance')
