@@ -54,6 +54,9 @@ modelPath = env.output.current_model;
 use_raw_image=env.pixelClassifier.use_raw_image;
 textureWindows=env.pixelClassifier.textureWindows;
 speckleFilter=env.pixelClassifier.speckleFilter;
+gradient_smooth_kernel=env.pixelClassifier.gradient_smooth_kernel;
+tpi_kernel=env.pixelClassifier.tpi_kernel;
+
 try % backwards compatibility
     trainingPath=env.output.current_training;
 end
@@ -134,14 +137,20 @@ for imIndex = 1:nImages % loop over images
             [F,featNames] = imageFeatures(imageList{imIndex}(:,:,band),...
                 sigmas,offsets,osSigma,radii,cfSigma,logSigmas,sfSigmas,...
                 use_raw_image, textureWindows, speckleFilter,...
-                names{imIndex}, maprefs{imIndex}, mapinfos{imIndex});
+                names{imIndex}, maprefs{imIndex}, mapinfos{imIndex},...
+                [],[]);
         elseif ismember(band, env.inc_band) % for incidence angle band
             [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),...
                 [],[],[],[],[],[],[], 1,...
-                [], []);
+                [], [],...
+                [],[],[],[],[]);
             featNames(end+1)=featNames_last_band;
-        elseif ismember(band, env.dem_band) % for dem band
-            error('undefined')    
+        elseif ismember(band, env.dem_band) % for DEM/hgt band
+            [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),...
+                [],[],[],[],[],[],[], [],...
+                [], [],...
+                [], [], [], gradient_smooth_kernel, tpi_kernel); 
+            featNames(end+1:end+length(featNames_last_band))=featNames_last_band;
 %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
 %             nBandsFinal=nBands-1; % for plotting purposes % Don't extract any features from inc. band.  
         else
@@ -303,6 +312,8 @@ model.featNames=featNames;
 model.use_raw_image=use_raw_image;
 model.textureWindows=textureWindows;
 model.speckleFilter=speckleFilter;
+model.gradient_smooth_kernel=gradient_smooth_kernel;
+model.tpi_kernel=tpi_kernel;
 model.env=env;
 try % unnecc, now that I introduced try catch for confusionchart
     model.validation=v;

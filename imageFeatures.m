@@ -5,8 +5,12 @@ if ~isempty(varargin)
     name=varargin{1}; % names of input files (used for translation filter)
     R=varargin{2}; % map ref object
     mapinfo=varargin{3}; % map info, incl projection
+    gradient_smooth_kernel=varargin{4};
+    tpi_kernel=varargin{5};
 else
     name='NaN'; % hidden error
+    gradient_smooth_kernel=0;
+    tpi_kernel=0;
 end
 
 %% create and apply data mask
@@ -20,6 +24,8 @@ if use_raw_image
     featNames{featIndex} = sprintf('rawImage');
     F=cat(3, F, I); % just use original image w/o filters!
 end
+
+%% Compute features
 if ~isempty(sigmas)
     derivNames = {'d0','dx','dy','dxx','dxy','dyy','hessEV1','hessEV2'};
     for sigma = sigmas
@@ -91,12 +97,39 @@ if ~isempty(textureWindows)
        F = cat(3,F,movstd(I,window, 'omitnan' )); % need to mirror window...
    end
 end
+
 if ~isempty(speckleFilter)
     featIndex = featIndex+1;
     featNames{featIndex} = 'speckleFilter';
     F = cat(3,F,imguidedfilter(I));
 end
 
+if gradient_smooth_kernel>0
+    global env
+    addpath(env.paths.topotoolbox);
+    DEM=GRIDobj([1:size(I,2)],[1:size(I,1)],I);
+
+        % fill sinks and create flow obj
+    DEMf = fillsinks(DEM); % , isnan(DEM) % note: NaN's have already been replaced with zero, so they will get filled
+%     figure; imageschs(DEMf); colorbar; title('Filled DEM')
+
+        % Smooth and Gradient
+    DEMs = filter(DEMf,'mean',[gradient_smooth_kernel, gradient_smooth_kernel]);
+    DEMg= gradient8(DEMs, 'per', 'useparallel', 1);
+%     figure; imagesc(DEMg, [0 25]); colorbar; title('Max Gradient')
+    F = cat(3,F,DEMg.Z);
+    featIndex = featIndex+1;
+    featNames{featIndex} = sprintf('gradSmooth%d',gradient_smooth_kernel);
+end
+
+if tpi_kernel > 0
+        %% TPI
+    DEMr= roughness(DEMf, 'tpi', [tpi_kernel, tpi_kernel]);
+%     figure; imagesc(DEMr, [-0.4 0.4]); colorbar; title('TPI')
+    F = cat(3,F,DEMr.Z);
+    featIndex = featIndex+1;
+    featNames{featIndex} = sprintf('TPI%dkernel',tpi_kernel);
+end
 %% add back in NaNs
 F(repmat(msk,[1,1,size(F,3)]))=NaN;
 

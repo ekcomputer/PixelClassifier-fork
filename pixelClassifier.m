@@ -90,15 +90,21 @@ for imIndex = 1:length(imagePaths)
                 model.offsets,model.osSigma,model.radii,model.cfSigma,...
                 model.logSigmas,model.sfSigmas, model.use_raw_image,...
                 model.textureWindows, model.speckleFilter,...
-                names{imIndex}, R, mapinfo));
+                names{imIndex}, R, mapinfo,...
+                [],[]));
             fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         elseif ismember(band, env.inc_band) % for incidence angle band
-            F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], []));
+            F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
+                [],[],[],[],[]));
             fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
 %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
-            % Don't extract any features from inc. band.
-        elseif ismember(band, env.dem_band) % for dem band
-            error('undefined')    
+            % Don't extract any features from inc. band.   
+        elseif ismember(band, env.dem_band) % for DEM/hgt band
+            F = cat(3,F,imageFeatures(I(:,:,band),...
+                [],[],[],[],[],[],[], [],...
+                [], [],...
+                [], [], [], model.gradient_smooth_kernel, model.tpi_kernel)); 
+            fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         else 
             error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
         end
