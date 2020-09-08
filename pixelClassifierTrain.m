@@ -154,7 +154,8 @@ for imIndex = 1:nImages % loop over images
 %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
 %             nBandsFinal=nBands-1; % for plotting purposes % Don't extract any features from inc. band.  
         else
-            error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
+            warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
+            continue
         end
         fprintf('computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
 %         if band==1 && strcmp(env.inputType, 'Frim_dir_nband-inc') % only compute labels for first band of image

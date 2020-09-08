@@ -106,7 +106,7 @@ for imIndex = 1:length(imagePaths)
                 [], [], [], model.gradient_smooth_kernel, model.tpi_kernel)); 
             fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
         else 
-            error('Unknown band configuration in input file(s) or wrong env.inputType selected.')
+            warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
         end
 %         F=cat(3,F,F0); clear F0;
     end
