@@ -56,95 +56,100 @@ end
 %% classify
 % parpool(2)
 for imIndex = 1:length(imagePaths)
-    [I,R] = geotiffread(imagePaths{imIndex});
-    mapinfo=geotiffinfo(imagePaths{imIndex});
-    nBands=size(I, 3);
-    
-        % set NoData values to NaN
-    I(repmat(any(I(:, :, env.radar_bands)<0,3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if any radar band <0   
-    I(repmat(all(I(:, :,env.radar_bands)==env.constants.noDataValue, 3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if each radar band ==0
+    try % for fault tolerance so following images will still run even if an error...
+        [I,R] = geotiffread(imagePaths{imIndex});
+        mapinfo=geotiffinfo(imagePaths{imIndex});
+        nBands=size(I, 3);
 
-        % remove NaN's
-% % Note section under heading 'mask out near range, if applicable' adds
-% NaNs back in...
-%     I(repmat(isnan(I(:,:,nBands)),...
-%         [1, 1, nBands]))=env.constants.noDataValue;
-    tic;
-    
-    %% mask out near range, if applicable
-    if ~isnan(env.inc_band) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
-        if size(I, 3) <4 % no inc band was included
-            error('No inc. band found?')
-        else % inc band was included
-            fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
-            msk=I(:,:,env.inc_band) < env.IncMaskMin; % negative mask for near range
-            I(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
-        end
-    end
-    %% loop over bands w/i image
-    
-    F=single.empty(size(I,1),size(I,2),0); % initilize
-    for band=1:nBands
-        if ismember(band, env.radar_bands) % for radar bands
-            F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
-                model.offsets,model.osSigma,model.radii,model.cfSigma,...
-                model.logSigmas,model.sfSigmas, model.use_raw_image,...
-                model.textureWindows, model.speckleFilter,...
-                names{imIndex}, R, mapinfo,...
-                [],[]));
-            fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        elseif ismember(band, env.inc_band) % for incidence angle band
-            F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
-                [],[],[],[],[]));
-            fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-%         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
-            % Don't extract any features from inc. band.   
-        elseif ismember(band, env.dem_band) % for DEM/hgt band
-            F = cat(3,F,imageFeatures(I(:,:,band),...
-                [],[],[],[],[],[],[], [],...
-                [], [],...
-                [], [], [], model.gradient_smooth_kernel, model.tpi_kernel)); 
-            fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-        else 
-            warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
-        end
-%         F=cat(3,F,F0); clear F0;
-    end
-    fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
-    try
-%         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
-%         WARNING using warning('on','verbose') to query warning message
-%         SOMEHOW
-        [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
-    catch e % if out of memory
-        fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
-        fprintf(1,'The identifier was:\t%s\n',e.identifier);
-        fprintf(1,'There was an error! The message was:\t%s\n',e.message);
-    end
-    fprintf('time: %f s\n', toc);
+            % set NoData values to NaN
+        I(repmat(any(I(:, :, env.radar_bands)<0,3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if any radar band <0   
+        I(repmat(all(I(:, :,env.radar_bands)==env.constants.noDataValue, 3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if each radar band ==0
 
-    [fpath,fname] = fileparts(imagePaths{imIndex});
-    
-    %% save individ masks or class probs, if selected
-    for pmIndex = 1:size(classProbs,3)
-        if outputMasks
-            base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
-            fprintf('\tWriting indiv. masks:\t%s\n', base_out);
-            imwrite(imL == pmIndex,[fpath filesep fname base_out]);
+            % remove NaN's
+    % % Note section under heading 'mask out near range, if applicable' adds
+    % NaNs back in...
+    %     I(repmat(isnan(I(:,:,nBands)),...
+    %         [1, 1, nBands]))=env.constants.noDataValue;
+        tic;
+
+        %% mask out near range, if applicable
+        if ~isnan(env.inc_band) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+            if size(I, 3) <4 % no inc band was included
+                error('No inc. band found?')
+            else % inc band was included
+                fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
+                msk=I(:,:,env.inc_band) < env.IncMaskMin; % negative mask for near range
+                I(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
+            end
         end
-        if outputProbMaps
-            base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
-            fprintf('\tWriting indiv. class probs:\t%s\n', base_out);
-            imwrite(classProbs(:,:,pmIndex),[fpath filesep fname base_out]);
+        %% loop over bands w/i image
+
+        F=single.empty(size(I,1),size(I,2),0); % initilize
+        for band=1:nBands
+            if ismember(band, env.radar_bands) % for radar bands
+                F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
+                    model.offsets,model.osSigma,model.radii,model.cfSigma,...
+                    model.logSigmas,model.sfSigmas, model.use_raw_image,...
+                    model.textureWindows, model.speckleFilter,...
+                    names{imIndex}, R, mapinfo,...
+                    [],[]));
+                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+            elseif ismember(band, env.inc_band) % for incidence angle band
+                F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
+                    [],[],[],[],[]));
+                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+    %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
+                % Don't extract any features from inc. band.   
+            elseif ismember(band, env.dem_band) % for DEM/hgt band
+                F = cat(3,F,imageFeatures(I(:,:,band),...
+                    [],[],[],[],[],[],[], [],...
+                    [], [],...
+                    [], [], [], model.gradient_smooth_kernel, model.tpi_kernel)); 
+                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+            else 
+                warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
+            end
+    %         F=cat(3,F,F0); clear F0;
         end
+        fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
+        try
+    %         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
+    %         WARNING using warning('on','verbose') to query warning message
+    %         SOMEHOW
+            [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
+        catch e % if out of memory
+            fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
+            fprintf(1,'The identifier was:\t%s\n',e.identifier);
+            fprintf(1,'There was an error! The message was:\t%s\n',e.message);
+        end
+        fprintf('time: %f s\n', toc);
+
+        [fpath,fname] = fileparts(imagePaths{imIndex});
+
+        %% save individ masks or class probs, if selected
+        for pmIndex = 1:size(classProbs,3)
+            if outputMasks
+                base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
+                fprintf('\tWriting indiv. masks:\t%s\n', base_out);
+                imwrite(imL == pmIndex,[fpath filesep fname base_out]);
+            end
+            if outputProbMaps
+                base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
+                fprintf('\tWriting indiv. class probs:\t%s\n', base_out);
+                imwrite(classProbs(:,:,pmIndex),[fpath filesep fname base_out]);
+            end
+        end
+
+        %% Write classified image
+        try georef_out(fname, imL);
+            fprintf('Writing classified tif for:\t%s.\n', fname);
+        catch
+            warning('Not able to write tif:\t%s.\n', fname);
+        end
+    catch e
+        warning('Error at some point during processing of %s.\nError ID: %s\nError message: %s',...
+            imagePaths{imIndex}, e.identifier, e.message)
     end
-    
-    %% Write classified image
-    try georef_out(fname, imL);
-        fprintf('Writing classified tif for:\t%s.\n', fname);
-    catch
-        warning('Not able to write tif:\t%s.\n', fname);
-    end   
 end
 
 fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nDone classifying.\n')

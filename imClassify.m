@@ -12,7 +12,7 @@ if nSubsets == 1
         indOfMax=uint8(env.constants.noDataValue_ouput)*ones([size(rfFeat, 1),1], 'uint8'); % same as zeros
         
             % generate mask
-        msk=all(isnan(rfFeat),2); % negative mask
+        msk=any(isnan(rfFeat),2); % negative mask
         
             % predict only on valid data
         [~,scores_valid] = predict(treeBag,rfFeat(~msk,:));
@@ -61,7 +61,7 @@ else
         indOfMax=uint8(env.constants.noDataValue_ouput)*ones([size(ftsubsets{i}, 1),1], 'uint8'); % same as zeros
         
             % generate mask
-        msk=all(isnan(ftsubsets{i}),2); % negative mask
+        msk=any(isnan(ftsubsets{i}),2); % negative mask
         
             % predict only on valid data
         [~,scores_valid] = predict(treeBag,ftsubsets{i}(~msk,:));
@@ -79,7 +79,7 @@ else
     
     %% pre-allocate and re-use variables; set as single and uint8 to save mem    
     scores = zeros(nVariables,length(treeBag.ClassNames), 'single');
-    indOfMax = zeros(nVariables,1, 'uint8');
+    indOfMax = zeros(nVariables,1, 'uint8'); % testing
     
     %% Reshape cell array into matrix (scores) or vector (classes)
     for i = 1:nSubsets
