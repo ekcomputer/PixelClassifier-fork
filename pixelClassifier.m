@@ -57,7 +57,26 @@ end
 % parpool(2)
 for imIndex = 1:length(imagePaths)
     try % for fault tolerance so following images will still run even if an error...
-        [I,R] = geotiffread(imagePaths{imIndex});
+        try
+            [I,R] = geotiffread(imagePaths{imIndex});
+            mapinfo=geotiffinfo(imagePaths{imIndex});
+            if isempty(R) || isempty(mapinfo.SpatialRef)
+                error('EK: Empty R')
+            end
+        catch w
+            warning('EK Warning: initial geotifinfo failed. Using gdaledit and retrying...\n\tFile: %s', imagePaths{imIndex})
+                
+                % use gdal_edit and values from other matlab I/O functions
+                % to re-assign SRS info if image is normal tif + tfw and
+                % proj
+            worldfile=[imagePaths{imIndex}(1:end-4), '.tfw'];
+            im_info=imfinfo(imagePaths{imIndex});
+            co=worldfileread(worldfile, 'planar', [im_info.Height, im_info.Width]);
+            bb=[co.XWorldLimits(1), co.YWorldLimits(2), co.XWorldLimits(2), co.YWorldLimits(1)];
+            cmd=sprintf('gdal_edit.py -a_srs "EPSG:102001" -a_ullr %s %s', num2str(bb), imagePaths{imIndex});
+            system(cmd);
+            [I,R] = geotiffread(imagePaths{imIndex});
+        end
         mapinfo=geotiffinfo(imagePaths{imIndex});
         nBands=size(I, 3);
 
