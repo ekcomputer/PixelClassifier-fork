@@ -1,3 +1,4 @@
+% Note "if 1==1 switch to avoid using blockproc"
 clear, 
 % clc
 fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting classification queue...\n')
@@ -138,13 +139,14 @@ for imIndex = 1:length(imagePaths)
             fprintf('  ---> saved\n')
             clear F
         end % end loop over bands
-        
+        clear('F_object')
         fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
         try
-    %         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
-    %         WARNING using warning('on','verbose') to query warning message
-    %         SOMEHOW
-            [imL,classProbs] = imClassify(F_obj_pth,model.treeBag,nSubsets);
+                % load entire F file into memory - hopefully, it fits...
+                % should be 30 GB for a 22x23 kpx image with 15 feature
+                % bands...
+            F=load(F_obj_pth);
+            [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
         catch e % if out of memory
             fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
             fprintf(1,'The identifier was:\t%s\n',e.identifier);
@@ -153,7 +155,10 @@ for imIndex = 1:length(imagePaths)
         fprintf('time: %f s\n', toc);
 
         [fpath,fname] = fileparts(imagePaths{imIndex});
-        if 1 == 0 % Depricated in order to write in chuncks
+        
+        %% Proceed to write output
+
+        if 1 == 1
             %% save individ masks or class probs, if selected
             for pmIndex = 1:size(classProbs,3)
                 if outputMasks
@@ -168,13 +173,13 @@ for imIndex = 1:length(imagePaths)
                 end
             end
 
-            %% Write classified image
+                % Write classified image
             try georef_out(fname, imL, true);
                 fprintf('Writing classified tif for:\t%s.\n', fname);
             catch
                 warning('Not able to write tif:\t%s.\n', fname);
             end
-        else
+        else % Depricated: write in chuncks not working with .mat file
                 % movefiles
             [DESTINATION, gt]=georef_out(fname, imL, false);
             [SUCCESS,MESSAGE,MESSAGEID] = movefile([env.tempDir, 'cls_tmp.tif'],DESTINATION)

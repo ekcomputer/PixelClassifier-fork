@@ -1,8 +1,13 @@
 function [imL,classProbs] = imClassify(rfFeat,treeBag,nSubsets)
 % Re-written to take a .mat file pathname instead of matrix, if memory
 % constraints. Old option (matrix as input) is still retained.
+% TODO: modify original code for parallel to not load entire mat-obj of F
+% into mem (imClassify)
 global env
-block_proc = exist(rfFeat)==2; % if input 'rfFeat' is a pathname (use block processing to file)
+block_proc=0;
+if isstr(rfFeat)
+    block_proc = exist(rfFeat)==2; % if input 'rfFeat' is a pathname (use block processing to file)
+end
 %% reshape rfFeat from no.entries x no. features to linear
 
 %% branch for parallel
