@@ -1,3 +1,4 @@
+% Note "if 1==1 switch to avoid using blockproc"
 clear, 
 % clc
 fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting classification queue...\n')
@@ -110,37 +111,47 @@ for imIndex = 1:length(imagePaths)
         %% loop over bands w/i image
 
         F=single.empty(size(I,1),size(I,2),0); % initilize
+        F_obj_pth=[env.tempDir, 'imageFeatures_bands.mat'];
+        delete(F_obj_pth); % in case it exists from prev image
+        save(F_obj_pth, 'F', '-v7.3') % initialize matfile
+        F_object = matfile(F_obj_pth,'Writable',true); % initialize matfile object
         for band=1:nBands
             if ismember(band, env.radar_bands) % for radar bands
-                F = cat(3,F,imageFeatures(I(:,:,band),model.sigmas,...
+                F = imageFeatures(I(:,:,band),model.sigmas,...
                     model.offsets,model.osSigma,model.radii,model.cfSigma,...
                     model.logSigmas,model.sfSigmas, model.use_raw_image,...
                     model.textureWindows, model.speckleFilter,...
                     names{imIndex}, R, mapinfo,...
-                    [],[]));
-                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-            elseif ismember(band, env.inc_band)  & env.use_inc_band % for incidence angle band
-                F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
-                    [],[],[],[],[]));
-                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+                    [],[]);
+                fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
+            elseif ismember(band, env.inc_band) % for incidence angle band
+                F = imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
+                    [],[],[],[],[]);
+                fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
     %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
                 % Don't extract any features from inc. band.   
             elseif ismember(band, env.dem_band) % for DEM/hgt band
-                F = cat(3,F,imageFeatures(I(:,:,band),...
+                F = imageFeatures(I(:,:,band),...
                     [],[],[],[],[],[],[], [],...
                     [], [],...
-                    [], [], [], model.gradient_smooth_kernel, model.tpi_kernel)); 
-                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+                    [], [], [], model.gradient_smooth_kernel, model.tpi_kernel); 
+                fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
             else 
                 warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
+                continue
             end
-    %         F=cat(3,F,F0); clear F0;
-        end
+            [f.y,f.x,f.z]=size(F_object.F);
+            F_object.F(:,:,f.z+1:f.z+size(F,3))=F; % write out to F_object
+            fprintf('  ---> saved\n')
+            clear F
+        end % end loop over bands
+        clear('F_object')
         fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
         try
-    %         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
-    %         WARNING using warning('on','verbose') to query warning message
-    %         SOMEHOW
+                % load entire F file into memory - hopefully, it fits...
+                % should be 30 GB for a 22x23 kpx image with 15 feature
+                % bands...
+            F=load(F_obj_pth);
             [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
         catch e % if out of memory
             fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
@@ -150,30 +161,47 @@ for imIndex = 1:length(imagePaths)
         fprintf('time: %f s\n', toc);
 
         [fpath,fname] = fileparts(imagePaths{imIndex});
+        
+        %% Proceed to write output
 
-        %% save individ masks or class probs, if selected
-        for pmIndex = 1:size(classProbs,3)
-            if outputMasks
-                base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
-                fprintf('\tWriting indiv. masks:\t%s\n', base_out);
-                imwrite(imL == pmIndex,[fpath filesep fname base_out]);
+        if 1 == 1
+            %% save individ masks or class probs, if selected
+            for pmIndex = 1:size(classProbs,3)
+                if outputMasks
+                    base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
+                    fprintf('\tWriting indiv. masks:\t%s\n', base_out);
+                    imwrite(imL == pmIndex,[fpath filesep fname base_out]);
+                end
+                if outputProbMaps
+                    base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
+                    fprintf('\tWriting indiv. class probs:\t%s\n', base_out);
+                    imwrite(classProbs(:,:,pmIndex),[fpath filesep fname base_out]);
+                end
             end
-            if outputProbMaps
-                base_out=sprintf('%s_Class%02d.png',fname, pmIndex);
-                fprintf('\tWriting indiv. class probs:\t%s\n', base_out);
-                imwrite(classProbs(:,:,pmIndex),[fpath filesep fname base_out]);
-            end
-        end
 
-        %% Write classified image
-        try georef_out(fname, imL);
-            fprintf('Writing classified tif for:\t%s.\n', fname);
-        catch
-            warning('Not able to write tif:\t%s.\n', fname);
+                % Write classified image
+            try georef_out(fname, imL, true);
+                fprintf('Writing classified tif for:\t%s.\n', fname);
+            catch
+                warning('Not able to write tif:\t%s.\n', fname);
+            end
+        else % Depricated: write in chuncks not working with .mat file
+                % movefiles
+            [DESTINATION, gt]=georef_out(fname, imL, false);
+            [SUCCESS,MESSAGE,MESSAGEID] = movefile([env.tempDir, 'cls_tmp.tif'],DESTINATION)
+            if SUCCESS==0
+               error(MESSAGE) 
+            end
+            
+                % write georef info
+            gti_out=[DESTINATION(1:end-4), '.tfw']; % Move up one in stack
+            worldfilewrite(gt.SpatialRef, gti_out);
+            % TODO: write proj file HERE?
         end
     catch e
-        warning('Error at some point during processing of %s.\nError ID: %s\nError message: %s',...
+        warning('Error at some point during processing of %s.\nError ID: %s\nError message: %s\nStack:\n',...
             imagePaths{imIndex}, e.identifier, e.message)
+        disp(e.stack)
     end
 end
 
