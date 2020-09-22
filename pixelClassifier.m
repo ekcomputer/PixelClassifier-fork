@@ -57,6 +57,12 @@ end
 % parpool(2)
 for imIndex = 1:length(imagePaths)
     try % for fault tolerance so following images will still run even if an error...
+            % check if image already exists...
+        f.pth_out=[imagePaths{imIndex}(1:end-4), '_cls.tif'];
+        if exist(f.pth_out)==2 % don't overwrite if it exists
+            fprintf('File:\t%s\n\talready exists, so not overwriting.\n', f.pth_out)
+            continue
+        end
         try
             [I,R] = geotiffread(imagePaths{imIndex});
             mapinfo=geotiffinfo(imagePaths{imIndex});
@@ -113,7 +119,7 @@ for imIndex = 1:length(imagePaths)
                     names{imIndex}, R, mapinfo,...
                     [],[]));
                 fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-            elseif ismember(band, env.inc_band) % for incidence angle band
+            elseif ismember(band, env.inc_band)  & env.use_inc_band % for incidence angle band
                 F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
                     [],[],[],[],[]));
                 fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);

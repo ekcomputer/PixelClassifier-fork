@@ -139,7 +139,7 @@ for imIndex = 1:nImages % loop over images
                 use_raw_image, textureWindows, speckleFilter,...
                 names{imIndex}, maprefs{imIndex}, mapinfos{imIndex},...
                 [],[]);
-        elseif ismember(band, env.inc_band) % for incidence angle band
+        elseif ismember(band, env.inc_band) & env.use_inc_band % for incidence angle band
             [F,featNames_last_band] = imageFeatures(imageList{imIndex}(:,:,band),...
                 [],[],[],[],[],[],[], 1,...
                 [], [],...
@@ -154,7 +154,7 @@ for imIndex = 1:nImages % loop over images
 %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
 %             nBandsFinal=nBands-1; % for plotting purposes % Don't extract any features from inc. band.  
         else
-            warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
+            warning('Not using features from band %d because it is not included in type ''%s''', band, env.inputType)
             continue
         end
         fprintf('computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
