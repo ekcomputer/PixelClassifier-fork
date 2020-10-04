@@ -1,7 +1,10 @@
 % Note "if 1==1 switch to avoid using blockproc"
-clear, 
+clear
 % clc
 fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting classification queue...\n')
+if isunix % make sure gdal paths work properly
+    unix('source /opt/PGSCplus-2.2.2/init-gdal.sh');
+end
 %% set parameters
 Env_PixelClassifier % load environment vars
 testPath = env.output.test_dir;
@@ -64,14 +67,15 @@ for imIndex = 1:length(imagePaths)
             fprintf('File:\t%s\n\talready exists, so not overwriting.\n', f.pth_out)
             continue
         end
+        fprintf('\n-------------------------\nLoading file:\t%s\n', imagePaths{imIndex})
         try
-            [I,R] = geotiffread(imagePaths{imIndex});
             mapinfo=geotiffinfo(imagePaths{imIndex});
+            [I,R] = geotiffread(imagePaths{imIndex});
             if isempty(R) || isempty(mapinfo.SpatialRef)
                 error('EK: Empty R')
             end
         catch w
-            warning('EK Warning: initial geotifinfo failed. Using gdaledit and retrying...\n\tFile: %s', imagePaths{imIndex})
+            fprintf('EK Warning: initial geotifinfo failed. Using gdaledit and retrying...\n\tFile: %s', imagePaths{imIndex})
                 
                 % use gdal_edit and values from other matlab I/O functions
                 % to re-assign SRS info if image is normal tif + tfw and
@@ -80,11 +84,11 @@ for imIndex = 1:length(imagePaths)
             im_info=imfinfo(imagePaths{imIndex});
             co=worldfileread(worldfile, 'planar', [im_info.Height, im_info.Width]);
             bb=[co.XWorldLimits(1), co.YWorldLimits(2), co.XWorldLimits(2), co.YWorldLimits(1)];
-            cmd=sprintf('gdal_edit.py -a_srs "EPSG:102001" -a_ullr %s %s', num2str(bb), imagePaths{imIndex});
+            cmd=sprintf('gdal_edit.py -a_srs "EPSG:102001" -a_ullr %s %s', num2str(bb), imagePaths{imIndex})
             system(cmd);
+            mapinfo=geotiffinfo(imagePaths{imIndex});
             [I,R] = geotiffread(imagePaths{imIndex});
         end
-        mapinfo=geotiffinfo(imagePaths{imIndex});
         nBands=size(I, 3);
 
             % set NoData values to NaN
@@ -124,7 +128,7 @@ for imIndex = 1:length(imagePaths)
                     names{imIndex}, R, mapinfo,...
                     [],[]);
                 fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
-            elseif ismember(band, env.inc_band) % for incidence angle band
+            elseif ismember(band, env.inc_band) & env.use_inc_band % for incidence angle band
                 F = imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
                     [],[],[],[],[]);
                 fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
@@ -137,7 +141,7 @@ for imIndex = 1:length(imagePaths)
                     [], [], [], model.gradient_smooth_kernel, model.tpi_kernel); 
                 fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
             else 
-                warning('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
+                fprintf('Not using features from band %d becasue it is not included in type ''%s''', band, env.inputType)
                 continue
             end
             [f.y,f.x,f.z]=size(F_object.F);
@@ -147,24 +151,28 @@ for imIndex = 1:length(imagePaths)
         end % end loop over bands
         clear('F_object')
         fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
-        try
+%         try
                 % load entire F file into memory - hopefully, it fits...
                 % should be 30 GB for a 22x23 kpx image with 15 feature
                 % bands...
-            F=load(F_obj_pth);
-            [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
-        catch e % if out of memory
-            fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
-            fprintf(1,'The identifier was:\t%s\n',e.identifier);
-            fprintf(1,'There was an error! The message was:\t%s\n',e.message);
-        end
-        fprintf('time: %f s\n', toc);
+%         load(F_obj_pth); % returns F ( 3D image)
 
+            % convert mat file to tiff for blockproc
         [fpath,fname] = fileparts(imagePaths{imIndex});
+        [tif_file_path, gt]=georef_out(fname, zeros(f.y, f.x, 'uint8'), false); % get file name, use zeros(f.y, f.x, 'uint8') as dummy matrix
+        bands_tiff_tmp=[tif_file_path(1:end-8), '_bands.tif']; % encode the orig file name in the temp file name in order to parse georef info!
+        mat2tiff(F_obj_pth, bands_tiff_tmp);
+        [imL,classProbs] = imClassify(bands_tiff_tmp,model.treeBag,nSubsets); % output file name is inferreed from bands_tiff_tmp
+%         catch e % if out of memory
+%             error('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
+%             fprintf(1,'The identifier was:\t%s\n',e.identifier);
+%             fprintf(1,'There was an error! The message was:\t%s\n',e.message);
+%         end
+        fprintf('time: %f s\n', toc);
         
         %% Proceed to write output
 
-        if 1 == 1
+        if env.useFullExtentClassifier==false % Depricated: need to use blockproc on input tif to avoid mem error...
             %% save individ masks or class probs, if selected
             for pmIndex = 1:size(classProbs,3)
                 if outputMasks
@@ -185,23 +193,31 @@ for imIndex = 1:length(imagePaths)
             catch
                 warning('Not able to write tif:\t%s.\n', fname);
             end
-        else % Depricated: write in chuncks not working with .mat file
+        elseif env.useFullExtentClassifier == True % Depricated: write in chuncks not working with .mat file % <----------- HERE double check
                 % movefiles
-            [DESTINATION, gt]=georef_out(fname, imL, false);
-            [SUCCESS,MESSAGE,MESSAGEID] = movefile([env.tempDir, 'cls_tmp.tif'],DESTINATION)
-            if SUCCESS==0
-               error(MESSAGE) 
-            end
+            [DESTINATION, gt]=georef_out(fname, NaN, false);
+%             [SUCCESS,MESSAGE,MESSAGEID] = movefile([env.tempDir, 'cls_tmp.tif'],DESTINATION)
+%             if SUCCESS==0
+%                error(MESSAGE) 
+%             end
             
                 % write georef info
             gti_out=[DESTINATION(1:end-4), '.tfw']; % Move up one in stack
             worldfilewrite(gt.SpatialRef, gti_out);
-            % TODO: write proj file HERE?
+            % TODO: write proj file HERE? and combine in geotiff
+            [fdir, fname]=fileparts(DESTINATION);
+            proj_output=[fdir, filesep, fname, '.prj'];
+            copyfile(env.proj_source, proj_output) 
+            fprintf('Creating .proj file: %s\n', proj_output)
+        else 
+            error('Ek error.')
         end
     catch e
-        warning('Error at some point during processing of %s.\nError ID: %s\nError message: %s\nStack:\n',...
+        warning('Error at some point during processing of \n\t%s.\nError ID: %s\nError message: %s\nStack:\n',...
             imagePaths{imIndex}, e.identifier, e.message)
-        disp(e.stack)
+        for p = 1:length(e)
+            disp(e(p).stack)
+        end
     end
 end
 

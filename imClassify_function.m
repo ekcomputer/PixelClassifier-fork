@@ -1,4 +1,4 @@
-function imL = imClassify_function(rfFeat,treeBag) % [imL,classProbs]
+function imL = imClassify_function(rfFeat,treeBag, noDataValue) % [imL,classProbs]
 % for blockproc version of imClassify. Inputs: matrix of image features, model,
 % fraction of image to process in each tile
 %
@@ -7,7 +7,7 @@ function imL = imClassify_function(rfFeat,treeBag) % [imL,classProbs]
 %
 % Unused bc blockproc can't use .mat file as input...crazy!
 
-global env
+% global env
 
 %% extract block
 rfFeat=rfFeat.data;
@@ -20,7 +20,7 @@ rfFeat = reshape(rfFeat,[nr*nc,nVariables]);
  
 % pre-allocate answer
 scores=zeros([size(rfFeat, 1), length(treeBag.ClassNames)], 'like', rfFeat);
-indOfMax=uint8(env.constants.noDataValue_ouput)*ones([size(rfFeat, 1),1], 'uint8'); % same as zeros
+indOfMax=uint8(noDataValue)*ones([size(rfFeat, 1),1], 'uint8'); % same as zeros
 
     % generate mask
 msk=any(isnan(rfFeat),2); % negative mask

@@ -1,8 +1,7 @@
 function [imL,classProbs] = imClassify(rfFeat,treeBag,nSubsets)
-% Re-written to take a .mat file pathname instead of matrix, if memory
+% Re-written to take a .tif file pathname instead of matrix as 'rfFeat', if memory
 % constraints. Old option (matrix as input) is still retained.
 % TODO: modify original code for parallel to not load entire mat-obj of F
-% into mem (imClassify)
 global env
 block_proc=0;
 if isstr(rfFeat)
@@ -64,12 +63,12 @@ elseif nSubsets > 1 & ~block_proc
         end
         
     catch
-        warning('Custom profile (%s) didn''t work.  Using local profile',...
+        fprintf('EK warning: Custom profile (%s) didn''t work.  Using local profile',...
             env.asc.parProfile)
     end
     
     %% classify in a parallel loop
-    parfor i = 1:nSubsets
+    for i = 1:nSubsets % TODO: change back to parfor
         
             % pre-allocate answer
         scores=zeros([size(ftsubsets{i}, 1), nClasses], 'like', ftsubsets{i});
@@ -102,16 +101,18 @@ elseif nSubsets > 1 & ~block_proc
         indOfMax(indices(i)+1:indices(i+1)) = imsubsets{i};
     end
 elseif nSubsets > 1 & block_proc
-    F_object = matfile(rfFeat,'Writable',false); % initialize matfile object just to get size
-    [f.y,f.x,f.z]=size(F_object.F); % can be slow
-    f.el=f.x*f.y*f.z;
+    info = imfinfo(rfFeat); % get size
+%     [f.y,f.x,f.z]=size(info.F); % can be slow
+    f.y=info.Height;
+    f.x=info.Width;
+%     f.el=f.x*f.y*f.z;
     f.tile_size= 1024; %round(sqrt(f.el/nSubsets)); % HERE: optimize
-    out_pth=[env.tempDir, 'cls_tmp.tif'];
-    outFileWriter = BP_bigTiffWriterEK(out_pth, f.y, f.x, f.tile_size, f.tile_size);
-    func = @(block_struct)  imClassify_function(block_struct, treeBag);
+%     out_pth=[env.tempDir, 'cls_tmp.tif'];
+    outFileWriter = BP_bigTiffWriterEK([rfFeat(1:end-10), '_cls.tif'], f.y, f.x, f.tile_size, f.tile_size); % remove the '_bands.tif'
+    func = @(block_struct)  imClassify_function(block_struct, treeBag, env.constants.noDataValue_ouput);
     % HERE: need to convert matfile to tif for an image that's too big to
     % fit in memory...
-    blockproc(rfFeat, [f.tile_size, f.tile_size], func, 'destination', outFileWriter, 'UseParallel', false); % HERE change
+    blockproc(rfFeat, [f.tile_size, f.tile_size], func, 'destination', outFileWriter, 'UseParallel', true);
     outFileWriter.close();
     % NOTE georef info is written in parent function
     indOfMax='already-written'; % HERE
