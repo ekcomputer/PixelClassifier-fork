@@ -204,7 +204,7 @@ for imIndex = 1:length(imagePaths)
                 % write georef info
             gti_out=[DESTINATION(1:end-4), '.tfw']; % Move up one in stack
             worldfilewrite(gt.SpatialRef, gti_out);
-            % TODO: write proj file HERE? and combine in geotiff
+            % TODO: combine proj and worldfile in geotiff % HERE
             [fdir, fname]=fileparts(DESTINATION);
             proj_output=[fdir, filesep, fname, '.prj'];
             copyfile(env.proj_source, proj_output) 
