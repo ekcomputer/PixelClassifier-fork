@@ -1,6 +1,10 @@
-clear, 
+% Note "if 1==1 switch to avoid using blockproc"
+clear
 % clc
 fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting classification queue...\n')
+if isunix % make sure gdal paths work properly
+    unix('source /opt/PGSCplus-2.2.2/init-gdal.sh');
+end
 %% set parameters
 Env_PixelClassifier % load environment vars
 testPath = env.output.test_dir;
@@ -57,14 +61,21 @@ end
 % parpool(2)
 for imIndex = 1:length(imagePaths)
     try % for fault tolerance so following images will still run even if an error...
+            % check if image already exists...
+        f.pth_out=[imagePaths{imIndex}(1:end-4), '_cls.tif'];
+        if exist(f.pth_out)==2 % don't overwrite if it exists
+            fprintf('File:\t%s\n\talready exists, so not overwriting.\n', f.pth_out)
+            continue
+        end
+        fprintf('\n-------------------------\nLoading file:\t%s\n', imagePaths{imIndex})
         try
-            [I,R] = geotiffread(imagePaths{imIndex});
             mapinfo=geotiffinfo(imagePaths{imIndex});
+            [I,R] = geotiffread(imagePaths{imIndex});
             if isempty(R) || isempty(mapinfo.SpatialRef)
                 error('EK: Empty R')
             end
         catch w
-            warning('EK Warning: initial geotifinfo failed. Using gdaledit and retrying...\n\tFile: %s', imagePaths{imIndex})
+            fprintf('EK Warning: initial geotifinfo failed. Using gdaledit and retrying...\n\tFile: %s', imagePaths{imIndex})
                 
                 % use gdal_edit and values from other matlab I/O functions
                 % to re-assign SRS info if image is normal tif + tfw and
@@ -73,11 +84,11 @@ for imIndex = 1:length(imagePaths)
             im_info=imfinfo(imagePaths{imIndex});
             co=worldfileread(worldfile, 'planar', [im_info.Height, im_info.Width]);
             bb=[co.XWorldLimits(1), co.YWorldLimits(2), co.XWorldLimits(2), co.YWorldLimits(1)];
-            cmd=sprintf('gdal_edit.py -a_srs "EPSG:102001" -a_ullr %s %s', num2str(bb), imagePaths{imIndex});
+            cmd=sprintf('gdal_edit.py -a_srs "EPSG:102001" -a_ullr %s %s', num2str(bb), imagePaths{imIndex})
             system(cmd);
+            mapinfo=geotiffinfo(imagePaths{imIndex});
             [I,R] = geotiffread(imagePaths{imIndex});
         end
-        mapinfo=geotiffinfo(imagePaths{imIndex});
         nBands=size(I, 3);
 
             % set NoData values to NaN
