@@ -124,7 +124,7 @@ for imIndex = 1:length(imagePaths)
                     names{imIndex}, R, mapinfo,...
                     [],[]));
                 fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
-            elseif ismember(band, env.inc_band) % for incidence angle band
+            elseif ismember(band, env.inc_band) & env.use_inc_band % for incidence angle band
                 F = cat(3,F,imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
                     [],[],[],[],[]));
                 fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
@@ -142,16 +142,16 @@ for imIndex = 1:length(imagePaths)
     %         F=cat(3,F,F0); clear F0;
         end
         fprintf('Classifying image %d of %d:  %s...\n',imIndex,length(imagePaths), imagePaths{imIndex});
-        try
+%         try
     %         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
     %         WARNING using warning('on','verbose') to query warning message
     %         SOMEHOW
-            [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
-        catch e % if out of memory
-            fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
-            fprintf(1,'The identifier was:\t%s\n',e.identifier);
-            fprintf(1,'There was an error! The message was:\t%s\n',e.message);
-        end
+        [imL,classProbs] = imClassify(F,model.treeBag,nSubsets);
+% %         catch e % if out of memory
+%         fprintf('EK: Error during classifying:  %s\nMemory crash?\n', imagePaths{imIndex});
+%         fprintf(1,'The identifier was:\t%s\n',e.identifier);
+%         fprintf(1,'There was an error! The message was:\t%s\n',e.message);
+%         end
         fprintf('time: %f s\n', toc);
 
         [fpath,fname] = fileparts(imagePaths{imIndex});
@@ -171,7 +171,7 @@ for imIndex = 1:length(imagePaths)
         end
 
         %% Write classified image
-        try georef_out(fname, imL);
+        try georef_out(fname, imL, 1);
             fprintf('Writing classified tif for:\t%s.\n', fname);
         catch
             warning('Not able to write tif:\t%s.\n', fname);
