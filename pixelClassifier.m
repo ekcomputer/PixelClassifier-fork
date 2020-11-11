@@ -36,7 +36,7 @@ nSubsets = env.pixelClassifier.run.nSubsets;
 %% load image paths, model
 
 disp('loading model')
-tic
+totalTime=tic;
 load(modelPath); % loads model
 toc
 
@@ -92,7 +92,7 @@ for imIndex = 1:length(imagePaths)
         nBands=size(I, 3);
 
             % set NoData values to NaN
-        I(repmat(any(I(:, :, env.radar_bands)<0,3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if any radar band <0   
+        I(repmat(any(I(:, :, env.radar_bands)<0,3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if any radar band <0 HERE TODO: note that if import type doesn't have attached inc band (like LUT-Fr), this method fails to ID NoData areas...  
         I(repmat(all(I(:, :,env.radar_bands)==env.constants.noDataValue, 3), [1,1, size(I,3)]))=NaN; % set pixels to NaN if each radar band ==0
 
             % remove NaN's
@@ -100,15 +100,16 @@ for imIndex = 1:length(imagePaths)
     % NaNs back in...
     %     I(repmat(isnan(I(:,:,nBands)),...
     %         [1, 1, nBands]))=env.constants.noDataValue;
-        tic;
+        stepTime=tic;
 
         %% mask out near range, if applicable
-        if ~isnan(env.inc_band) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+        if ~isnan(env.inc_band) & (env.IncMaskMin> 0 || env.IncMaskMax < Inf) % if input type doesn't use inc as feature, mask out near and far range inc angles bc they are unreliable
             if size(I, 3) <4 % no inc band was included
                 error('No inc. band found?')
             else % inc band was included
-                fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
-                msk=I(:,:,env.inc_band) < env.IncMaskMin; % negative mask for near range
+                fprintf('Masking out inc. angle < %0.2f and > %0.2f.\n', env.IncMaskMin, env.IncMaskMax)
+                msk=I(:,:,env.inc_band) < env.IncMaskMin |...
+                    I(:,:,env.inc_band) > env.IncMaskMax; % negative mask for near/far range
                 I(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
             end
         end
@@ -152,7 +153,7 @@ for imIndex = 1:length(imagePaths)
 %         fprintf(1,'The identifier was:\t%s\n',e.identifier);
 %         fprintf(1,'There was an error! The message was:\t%s\n',e.message);
 %         end
-        fprintf('time: %f s\n', toc);
+        fprintf('time: %f s\n', toc(stepTime));
 
         [fpath,fname] = fileparts(imagePaths{imIndex});
 
@@ -183,5 +184,5 @@ for imIndex = 1:length(imagePaths)
 end
 
 fprintf('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nDone classifying.\n')
-toc
+toc(totalTime)
 fprintf('Output images are in: %s\n\n', env.output.test_dir)
