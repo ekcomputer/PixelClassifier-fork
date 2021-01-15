@@ -117,12 +117,13 @@ for imIndex = 1:nImages % loop over images
 %     training(band).lb = [];
 
     % mask out near range, if applicable
-    if ~isnan(env.inc_band) & env.IncMaskMin> 0 % if input type doesn't use inc as feature, mask out near range inc angles bc they are unreliable
+    if ~isnan(env.inc_band) & (env.IncMaskMin> 0 || env.IncMaskMax < Inf) % if input type doesn't use inc as feature, mask out near and far range inc angles bc they are unreliable
         if size(imageList{imIndex}, 3) <4 % no inc band was included
             error('No inc. band found?')
         else % inc band was included
-            fprintf('Masking out inc. angle < %0.2f.\n', env.IncMaskMin)
-            msk=imageList{imIndex}(:,:,env.inc_band) < env.IncMaskMin; % negative mask for near range
+            fprintf('Masking out inc. angle < %0.2f and > %0.2f.\n', env.IncMaskMin, env.IncMaskMax)
+            msk=imageList{imIndex}(:,:,env.inc_band) < env.IncMaskMin...
+                | imageList{imIndex}(:,:,env.inc_band) > env.IncMaskMax; % negative mask for near/far range
             imageList{imIndex}(repmat(msk, [1,1, nBands]))=NaN;  % BW=logical(repmat(BW, [1 1 3]));
         end
     end
