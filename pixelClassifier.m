@@ -38,7 +38,7 @@ nSubsets = env.pixelClassifier.run.nSubsets;
 disp('loading model')
 totalTime=tic;
 load(modelPath); % loads model
-toc
+toc(totalTime)
 
 files = dir(testPath);
 nImages = 0;
@@ -115,7 +115,7 @@ for imIndex = 1:length(imagePaths)
         end
         %% loop over bands w/i image
 
-        if env.blockProcessing == True
+        if env.blockProcessing == true
             F_obj_pth=[env.tempDir, 'imageFeatures_bands.mat'];
             delete(F_obj_pth); % in case it exists from prev image
             save(F_obj_pth, 'F', '-v7.3') % initialize matfile
@@ -125,23 +125,23 @@ for imIndex = 1:length(imagePaths)
         end
         for band=1:nBands
             if ismember(band, env.radar_bands) % for radar bands
-                if env.blockProcessing == True
+                if env.blockProcessing == true
                     F = imageFeatures(I(:,:,band),model.sigmas,...
                         model.offsets,model.osSigma,model.radii,model.cfSigma,...
                         model.logSigmas,model.sfSigmas, model.use_raw_image,...
-                        model.textureWindows, model.speckleFilter,...
+                        model.textureWindows, model.speckleFilter,names{imIndex}, R, mapinfo,...
                         [],[]);
                 else % env.blockProcessing == False
                     F = cat(3, F, imageFeatures(I(:,:,band),model.sigmas,...
                         model.offsets,model.osSigma,model.radii,model.cfSigma,...
                         model.logSigmas,model.sfSigmas, model.use_raw_image,...
-                        model.textureWindows, model.speckleFilter,...
+                        model.textureWindows, model.speckleFilter,names{imIndex}, R, mapinfo,...
                         [],[]));
                 end
-                printf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
+                fprintf('Computed features from band %d of %d in image %d of %d\n', band, nBands, imIndex, nImages);
                 
             elseif ismember(band, env.inc_band) & env.use_inc_band % for incidence angle band
-                if env.blockProcessing == True
+                if env.blockProcessing == true
                     F = imageFeatures(I(:,:,band),[],[],[],[],[],[],[], 1, [], [],...
                     [],[],[],[],[]);
                 else % env.blockProcessing == False
@@ -152,7 +152,7 @@ for imIndex = 1:length(imagePaths)
     %         elseif band == nBands && ismember(env.inputType, {'Freeman', 'C3', 'T3', 'Sinclair'})
                 % Don't extract any features from inc. band.   
             elseif ismember(band, env.dem_band) % for DEM/hgt band
-                if env.blockProcessing == True
+                if env.blockProcessing == true
                     F = imageFeatures(I(:,:,band),...
                         [],[],[],[],[],[],[], [],...
                         [], [],...
@@ -165,17 +165,17 @@ for imIndex = 1:length(imagePaths)
                 end
                 fprintf('Computed features from band %d of %d in image %d of %d', band, nBands, imIndex, nImages);
             else 
-                fprintf('Not using features from band %d because it is not included in type ''%s''', band, env.inputType)
+                fprintf('Not using features from band %d because it is not included in type ''%s''\n', band, env.inputType)
                 continue
             end
-            if env.blockProcessing == True
+            if env.blockProcessing == true
                 [f.y,f.x,f.z]=size(F_object.F);
                 F_object.F(:,:,f.z+1:f.z+size(F,3))=F; % write out to F_object
                 fprintf('  ---> saved\n')
                 clear F
             end
         end % end loop over bands
-        if env.blockProcessing == True
+        if env.blockProcessing == true
             clear('F_object')
         end
         
@@ -189,7 +189,7 @@ for imIndex = 1:length(imagePaths)
     %         warning('off', 'MATLAB:MKDIR:DirectoryExists'); % MUTE THE
     %         WARNING using warning('on','verbose') to query warning message
     %         SOMEHOW
-        if env.blockProcessing == True
+        if env.blockProcessing == true
             fprintf('time: %f s\n', toc(stepTime));
 
                 % convert mat file to tiff for blockproc
@@ -210,8 +210,8 @@ for imIndex = 1:length(imagePaths)
         
         %% Proceed to write output
         [fpath,fname] = fileparts(imagePaths{imIndex});
-        if env.blockProcessing == True
-            try georef_out(fname, imL, True);
+        if env.blockProcessing == true
+            try georef_out(fname, imL, true);
                 fprintf('Writing classified tif for:\t%s.\n', fname);
             catch
                 warning('Not able to write tif:\t%s.\n', fname);
@@ -238,7 +238,7 @@ for imIndex = 1:length(imagePaths)
                 catch
                     warning('Not able to write tif:\t%s.\n', fname);
                 end
-            elseif env.useFullExtentClassifier == True % Depricated: write in chuncks not working with .mat file % <----------- HERE double check
+            elseif env.useFullExtentClassifier == true % Depricated: write in chuncks not working with .mat file % <----------- HERE double check
                     % movefiles
                 [DESTINATION, gt]=georef_out(fname, NaN, false);
     %             [SUCCESS,MESSAGE,MESSAGEID] = movefile([env.tempDir, 'cls_tmp.tif'],DESTINATION)
@@ -261,8 +261,8 @@ for imIndex = 1:length(imagePaths)
     catch e
         warning('Error at some point during processing of \n\t%s.\nError ID: %s\nError message: %s\nStack:\n',...
             imagePaths{imIndex}, e.identifier, e.message)
-        for p = 1:length(e)
-            disp(e(p).stack)
+        for p = 1:length(e.stack)
+            disp(e.stack(p))
         end
     end
 end
