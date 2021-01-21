@@ -54,7 +54,7 @@ elseif nSubsets > 1 & ~block_proc
     try
         if isunix && isempty(gcp('nocreate')) % if on ASC and no pool running
             nCores=str2double(getenv('SLURM_JOB_CPUS_PER_NODE')); % query number of tasks from slurm
-            if isempty(nCores) % not in slurm environment
+            if isempty(nCores) || isnan(nCores) % not in slurm environment
                 nCores=8;
             end
             parpool(env.asc.parProfile, nCores)

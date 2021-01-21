@@ -74,7 +74,7 @@ for imIndex = 1:length(imagePaths)
             if isempty(R) || isempty(mapinfo.SpatialRef)
                 error('EK: Empty R')
             end
-        catch w
+        catch w % shouldn't be necessary bc I am adding function add_tiff_georef to training_image_import workflow...
             fprintf('EK Warning: initial geotifinfo failed. Using gdaledit and retrying...\n\tFile: %s', imagePaths{imIndex})
                 
                 % use gdal_edit and values from other matlab I/O functions
