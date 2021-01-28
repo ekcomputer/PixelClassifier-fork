@@ -81,6 +81,7 @@ for imIndex = 1:length(imagePaths)
                 env_copy, model, names{imIndex}, mapinfo);
             blockproc(imagePaths{imIndex}, [1024, 1024], fun, 'Destination', f.pth_out,...
                 'UseParallel', true, 'BorderSize', [50, 50], 'PadMethod', 'symmetric') % NOTE biggeotiffwrite uses tilesize 1024x1024 <---------- HERE
+            add_tiff_georef(f.pth_out, [f.pth_out(1,1:end-8), '.tif'] , env.constants.noDataValue_ouput)
             disp('Finished classification.')
             % TODO 1/22/2021: Georeference output using georef_out('false')
             % function ,-------- HERE
