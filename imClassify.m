@@ -1,16 +1,32 @@
-function [imL,classProbs] = imClassify(rfFeat,treeBag,nSubsets)
+function [imL,classProbs] = imClassify(rfFeat,treeBag,nSubsets, varargin)
 % Re-written to take a .tif file pathname instead of matrix as 'rfFeat', if memory
 % constraints. Old option (matrix as input) is still retained.
+% Inputs:       rfFeat       image features in data table format
+%               treeBag      random forests structure
+%               nSubsets     degree of parallelsim; number of subsets
+%               env          contains env variables (optional)
+
+% Output:       imL           output image, (matrix nxmx1 of classes)
+%               classProbs    output image with probabilities for each
+%                             class (mxnxr, where r is number of classes)
+
 % TODO: modify original code for parallel to not load entire mat-obj of F
-global env
+% Note: references to blockproc refer to old iteration when blockproc was
+% called later in the stack. Now blockproc is called earlier, so this
+% function is not concerned with it.
+if nargin == 3 % for backwards compatibility
+    global env
+else
+    env = varargin{1}; % nargin >3 and I'm passing an env strxr so I don't have to call a global from within parallel
+end
 block_proc=0;
 if isstr(rfFeat)
     block_proc = exist(rfFeat)==2; % if input 'rfFeat' is a pathname (use block processing to file)
 end
 %% reshape rfFeat from no.entries x no. features to linear
 
-%% branch for parallel
-if nSubsets == 1   
+%% branches for parallel chunks vs serial
+if nSubsets == 1   % serial, no chunks
         % Reshape
     [nr,nc,nVariables] = size(rfFeat);
     rfFeat = reshape(rfFeat,[nr*nc,nVariables]);

@@ -7,6 +7,9 @@ if ~isempty(varargin)
     mapinfo=varargin{3}; % map info, incl projection
     gradient_smooth_kernel=varargin{4};
     tpi_kernel=varargin{5};
+    if nargin >= 17
+        env = varargin{6}; % backwards compat; % avoid passing global arg
+    end
 else
     name='NaN'; % hidden error
     gradient_smooth_kernel=0;
@@ -46,7 +49,7 @@ if ~isempty(offsets)
     for r = offsets
         aIndex = 0;
         try % if no name input or problem with name parsing
-            heading = CalculateRangeHeading(name, R, mapinfo);
+            heading = CalculateRangeHeading(name, R, mapinfo, env);
         catch
             heading = [pi/2, 3*pi/2]';
             warning('CalculateRangeHeading failed.  Check .ann file.  Using default of 90 and 270 deg.')
