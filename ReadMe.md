@@ -1,3 +1,8 @@
+[![DOI](https://zenodo.org/badge/224482360.svg)](https://zenodo.org/badge/latestdoi/224482360)
+I have modified the functions from the original codebase, which was used for biomedical image segmentation. Info follows from the original author:
+-Ethan Kyzivat, February 2022
+
+----------------------------------
 A single-layer Random Forest model for pixel classification (image segmentation).
 
 
